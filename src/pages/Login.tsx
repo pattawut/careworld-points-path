@@ -9,6 +9,8 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Leaf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { useEffect } from 'react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +18,14 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
+
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,16 +42,34 @@ const Login = () => {
     
     setIsLoading(true);
     
-    // For demo only
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mock successful login for demo
+    try {
+      const { error, success } = await signIn(email, password);
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "เข้าสู่ระบบไม่สำเร็จ",
+          description: error,
+        });
+        return;
+      }
+      
+      if (success) {
+        toast({
+          title: "เข้าสู่ระบบสำเร็จ",
+          description: "ยินดีต้อนรับกลับมา",
+        });
+        navigate('/dashboard');
+      }
+    } catch (error) {
       toast({
-        title: "เข้าสู่ระบบสำเร็จ",
-        description: "ยินดีต้อนรับกลับมา",
+        variant: "destructive",
+        title: "เข้าสู่ระบบไม่สำเร็จ",
+        description: "เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง",
       });
-      navigate('/dashboard');
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -1,16 +1,35 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Leaf } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from '@/components/ui/use-toast';
 
 export function Navbar() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  // This would typically come from an auth context or redux store
-  const mockLogin = () => setIsAuthenticated(true);
-  const mockLogout = () => setIsAuthenticated(false);
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "ออกจากระบบสำเร็จ",
+        description: "คุณได้ออกจากระบบเรียบร้อยแล้ว",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  const handleSignupClick = () => {
+    navigate('/register');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
@@ -36,21 +55,25 @@ export function Navbar() {
           <Link to="/leaderboard" className="text-sm font-medium hover:text-eco-teal transition-colors">
             อันดับสมาชิก
           </Link>
-          {isAuthenticated ? (
+          {user ? (
             <div className="flex items-center gap-4">
               <Link to="/dashboard" className="text-sm font-medium hover:text-eco-teal transition-colors">
                 โปรไฟล์
               </Link>
-              <Button variant="outline" onClick={mockLogout} className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
+              <Button 
+                variant="outline" 
+                onClick={handleLogout} 
+                className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white"
+              >
                 ออกจากระบบ
               </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={mockLogin}>
+              <Button variant="ghost" onClick={handleLoginClick}>
                 เข้าสู่ระบบ
               </Button>
-              <Button className="bg-eco-gradient hover:opacity-90">
+              <Button className="bg-eco-gradient hover:opacity-90" onClick={handleSignupClick}>
                 สมัครสมาชิก
               </Button>
             </div>
@@ -84,21 +107,25 @@ export function Navbar() {
             <Link to="/leaderboard" className="text-sm font-medium hover:text-eco-teal transition-colors">
               อันดับสมาชิก
             </Link>
-            {isAuthenticated ? (
+            {user ? (
               <>
                 <Link to="/dashboard" className="text-sm font-medium hover:text-eco-teal transition-colors">
                   โปรไฟล์
                 </Link>
-                <Button variant="outline" onClick={mockLogout} className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
+                <Button 
+                  variant="outline" 
+                  onClick={handleLogout} 
+                  className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white"
+                >
                   ออกจากระบบ
                 </Button>
               </>
             ) : (
               <div className="flex flex-col gap-2">
-                <Button variant="ghost" onClick={mockLogin}>
+                <Button variant="ghost" onClick={handleLoginClick}>
                   เข้าสู่ระบบ
                 </Button>
-                <Button className="bg-eco-gradient hover:opacity-90">
+                <Button className="bg-eco-gradient hover:opacity-90" onClick={handleSignupClick}>
                   สมัครสมาชิก
                 </Button>
               </div>

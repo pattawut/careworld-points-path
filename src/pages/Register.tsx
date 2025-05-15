@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Leaf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -20,6 +21,14 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
+
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,16 +63,34 @@ const Register = () => {
     
     setIsLoading(true);
     
-    // For demo only
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mock successful registration for demo
+    try {
+      const { error, success } = await signUp(email, password, name);
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "สมัครสมาชิกไม่สำเร็จ",
+          description: error,
+        });
+        return;
+      }
+      
+      if (success) {
+        toast({
+          title: "สมัครสมาชิกสำเร็จ",
+          description: "ยินดีต้อนรับเข้าสู่โครงการ CareWorld รักษ์โลก",
+        });
+        navigate('/dashboard');
+      }
+    } catch (err) {
       toast({
-        title: "สมัครสมาชิกสำเร็จ",
-        description: "ยินดีต้อนรับเข้าสู่โครงการ CareWorld รักษ์โลก",
+        variant: "destructive",
+        title: "สมัครสมาชิกไม่สำเร็จ",
+        description: "เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง",
       });
-      navigate('/dashboard');
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
