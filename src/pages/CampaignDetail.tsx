@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { RecycleIcon, ShoppingBag, ImageIcon, Award, Calendar, Users, Leaf } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 const campaignsData = {
   "bag": {
@@ -97,7 +96,7 @@ const campaignsData = {
       },
       {
         id: 3,
-        image: "https://images.unsplash.com/photo-1564844536311-de546a28c87d?auto=format&fit=crop&w=600&q=80",
+        image: "https://images.unsplash.com/photo-1621609764095-b32bbe35cf3a?auto=format&fit=crop&w=600&q=80",
         user: "สมชาย ใจดี",
         date: "4 วันก่อน",
         caption: "แก้วเซรามิคส์วนตัว นำมาใช้ที่ออฟฟิศทุกวัน ลดขยะได้เยอะมาก"
@@ -156,6 +155,7 @@ const CampaignDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [activeTab, setActiveTab] = useState('about');
   const { toast } = useToast();
   
   // Fallback if slug doesn't exist
@@ -204,6 +204,14 @@ const CampaignDetail = () => {
     setCaption('');
   };
   
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  const navigateToTab = (tabValue: string) => {
+    setActiveTab(tabValue);
+  };
+  
   const CampaignIcon = campaign.icon;
   
   return (
@@ -247,7 +255,7 @@ const CampaignDetail = () => {
         {/* Main Content */}
         <section className="py-10 bg-eco-light">
           <div className="container px-4 md:px-6">
-            <Tabs defaultValue="about" className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <div className="flex justify-center mb-6">
                 <TabsList className="bg-white/50 p-1">
                   <TabsTrigger value="about">รายละเอียด</TabsTrigger>
@@ -276,10 +284,12 @@ const CampaignDetail = () => {
                           </ul>
                           
                           <div className="mt-8 flex items-center justify-center">
-                            <Button asChild size="lg" className="bg-eco-gradient hover:opacity-90">
-                              <a href="#participate" onClick={() => document.querySelector('[data-value="participate"]')?.click()}>
-                                ร่วมกิจกรรมเลย
-                              </a>
+                            <Button 
+                              size="lg" 
+                              className="bg-eco-gradient hover:opacity-90"
+                              onClick={() => navigateToTab('participate')}
+                            >
+                              ร่วมกิจกรรมเลย
                             </Button>
                           </div>
                         </div>
@@ -328,7 +338,7 @@ const CampaignDetail = () => {
                             </div>
                           </div>
                           <Button 
-                            onClick={() => document.querySelector('[data-value="participate"]')?.click()}
+                            onClick={() => navigateToTab('participate')}
                             className="w-full bg-eco-gradient hover:opacity-90"
                           >
                             ร่วมกิจกรรมเลย
@@ -464,7 +474,7 @@ const CampaignDetail = () => {
                     อัพโหลดรูปภาพของคุณเพื่อร่วมแสดงในแกลเลอรี่
                   </p>
                   <Button 
-                    onClick={() => document.querySelector('[data-value="participate"]')?.click()}
+                    onClick={() => navigateToTab('participate')}
                     className="mt-4 bg-eco-gradient hover:opacity-90"
                   >
                     ร่วมกิจกรรมเลย
