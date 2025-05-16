@@ -17,7 +17,8 @@ type Activity = {
   activity_type: string;
   created_at: string;
   points: number;
-  profiles: {
+  user_id: string;
+  user: {
     full_name: string;
     avatar_url: string | null;
   };
@@ -32,17 +33,51 @@ export const ActivityGallery = () => {
     const fetchActivities = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // First fetch activities
+        const { data: activitiesData, error: activitiesError } = await supabase
           .from('activities')
-          .select('*, profiles(full_name, avatar_url)')
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(6);
 
-        if (error) {
-          throw error;
+        if (activitiesError) {
+          throw activitiesError;
         }
 
-        setActivities(data as Activity[]);
+        if (!activitiesData || activitiesData.length === 0) {
+          setActivities([]);
+          return;
+        }
+
+        // Then fetch profile data for each user_id
+        const userIds = [...new Set(activitiesData.map(activity => activity.user_id))];
+        
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
+
+        if (profilesError) {
+          throw profilesError;
+        }
+
+        // Create a lookup map for profiles
+        const profilesMap = profilesData?.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, any>) || {};
+
+        // Combine activities with their user data
+        const activitiesWithUserData = activitiesData.map(activity => ({
+          ...activity,
+          user: {
+            full_name: profilesMap[activity.user_id]?.full_name || 'ผู้ใช้',
+            avatar_url: profilesMap[activity.user_id]?.avatar_url
+          }
+        })) as Activity[];
+
+        setActivities(activitiesWithUserData);
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -116,11 +151,11 @@ export const ActivityGallery = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
                 <Avatar>
-                  <AvatarImage src={activity.profiles.avatar_url || undefined} />
-                  <AvatarFallback>{activity.profiles.full_name?.charAt(0) || '?'}</AvatarFallback>
+                  <AvatarImage src={activity.user.avatar_url || undefined} />
+                  <AvatarFallback>{activity.user.full_name?.charAt(0) || '?'}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-eco-blue">{activity.profiles.full_name || 'ผู้ใช้'}</p>
+                  <p className="font-medium text-eco-blue">{activity.user.full_name || 'ผู้ใช้'}</p>
                   <p className="text-xs text-gray-500">
                     {formatDistanceToNow(new Date(activity.created_at), { 
                       addSuffix: true,
