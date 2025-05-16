@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { ActivityTypeSelector } from './activity/ActivityTypeSelector';
+import { ActivityDescriptionField } from './activity/ActivityDescriptionField';
+import { ActivityImageUpload } from './activity/ActivityImageUpload';
+import { ActivityFormButtons } from './activity/ActivityFormButtons';
 
 interface ActivityFormProps {
   activity?: {
@@ -29,12 +31,14 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
   const { toast } = useToast();
   const isEditing = !!activity;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Update preview when image is changed
+  const handleImageChange = (file: File | null) => {
+    setImage(file);
     if (file) {
-      setImage(file);
       const objectUrl = URL.createObjectURL(file);
       setPreview(objectUrl);
+    } else {
+      setPreview(activity?.image_url || null);
     }
   };
   
@@ -52,15 +56,15 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
     try {
       setIsLoading(true);
       
-      // If there's a new image, upload it to Supabase Storage
+      // Handle image upload
       let imageUrl = activity?.image_url || null;
       
       if (image) {
+        // Upload new image
         const fileExt = image.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
         
-        // Upload the image
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('activity-images')
           .upload(filePath, image);
@@ -69,14 +73,14 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           throw uploadError;
         }
         
-        // Get public URL of the uploaded file
+        // Get public URL
         const { data: publicUrlData } = supabase.storage
           .from('activity-images')
           .getPublicUrl(filePath);
           
         imageUrl = publicUrlData.publicUrl;
         
-        // If editing and user uploaded a new image, delete the old one
+        // Delete old image if editing
         if (isEditing && activity.image_url) {
           const oldPath = activity.image_url.split('/').pop();
           if (oldPath) {
@@ -114,7 +118,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
             activity_type: activityType,
             description,
             image_url: imageUrl,
-            points: 1, // Default points for activity
+            points: 1, // Default points
           }]);
           
         if (error) throw error;
@@ -123,16 +127,15 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           title: "อัปโหลดกิจกรรมสำเร็จ",
           description: "ขอบคุณที่ร่วมแบ่งปันกิจกรรมรักษ์โลก",
         });
-      }
-      
-      // Reset form and call success callback
-      if (!isEditing) {
+        
+        // Reset form
         setActivityType('recycle');
         setDescription('');
         setImage(null);
         setPreview(null);
       }
       
+      // Call success callback
       onSuccess();
       
     } catch (error: any) {
@@ -147,119 +150,46 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
     }
   };
   
+  // Validate form
+  const isFormValid = !isEditing ? (!!description && !!preview) : !!description;
+  
   return (
     <Card className="border-none shadow-md">
       <CardHeader>
         <CardTitle>{isEditing ? 'แก้ไขกิจกรรม' : 'อัปโหลดกิจกรรม'}</CardTitle>
-        <CardDescription>{isEditing ? 'แก้ไขรายละเอียดกิจกรรมของคุณ' : 'แชร์ภาพกิจกรรมรักษ์โลกของคุณเพื่อสะสมแต้ม'}</CardDescription>
+        <CardDescription>
+          {isEditing 
+            ? 'แก้ไขรายละเอียดกิจกรรมของคุณ' 
+            : 'แชร์ภาพกิจกรรมรักษ์โลกของคุณเพื่อสะสมแต้ม'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="activityType" className="text-sm font-medium">
-              ประเภทกิจกรรม
-            </label>
-            <select 
-              id="activityType"
-              value={activityType}
-              onChange={(e) => setActivityType(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              disabled={isLoading}
-            >
-              <option value="recycle">คัดแยกขยะ</option>
-              <option value="bag">ใช้ถุงผ้า</option>
-              <option value="cup">ใช้แก้วส่วนตัว</option>
-              <option value="straw">ใช้หลอดส่วนตัว</option>
-            </select>
-          </div>
+          <ActivityTypeSelector 
+            value={activityType}
+            onChange={setActivityType}
+            isDisabled={isLoading}
+          />
           
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              คำอธิบายกิจกรรม
-            </label>
-            <textarea 
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="อธิบายสั้นๆ เกี่ยวกับกิจกรรมของคุณ"
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              disabled={isLoading}
-              required
-            />
-          </div>
+          <ActivityDescriptionField 
+            value={description}
+            onChange={setDescription}
+            isDisabled={isLoading}
+          />
           
-          <div className="space-y-2">
-            <label htmlFor="image" className="text-sm font-medium">
-              รูปภาพกิจกรรม {!isEditing && <span className="text-red-500">*</span>}
-            </label>
-            {preview ? (
-              <div className="relative">
-                <img 
-                  src={preview} 
-                  alt="Preview" 
-                  className="w-full h-64 object-cover rounded-md border"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="absolute top-2 right-2 bg-white"
-                  onClick={() => {
-                    setPreview(null);
-                    setImage(null);
-                  }}
-                  disabled={isLoading}
-                >
-                  เปลี่ยนรูป
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="image"
-                  className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer border-gray-300 hover:border-eco-teal bg-gray-50 hover:bg-gray-100"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">คลิกเพื่ออัปโหลดรูปภาพ</span>
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG หรือ HEIC (สูงสุด 5 MB)</p>
-                  </div>
-                  <input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange}
-                    disabled={isLoading}
-                    required={!isEditing}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
+          <ActivityImageUpload 
+            preview={preview}
+            onChange={handleImageChange}
+            isDisabled={isLoading}
+            isRequired={!isEditing}
+          />
           
-          <div className="flex gap-2 justify-end">
-            {onCancel && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onCancel}
-                disabled={isLoading}
-              >
-                ยกเลิก
-              </Button>
-            )}
-            <Button 
-              type="submit" 
-              className="bg-eco-gradient hover:opacity-90"
-              disabled={isLoading || (!isEditing && (!description || !preview))}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? 'บันทึกการแก้ไข' : 'อัปโหลดกิจกรรม'}
-            </Button>
-          </div>
+          <ActivityFormButtons 
+            isLoading={isLoading}
+            isEditing={isEditing}
+            isValid={isFormValid}
+            onCancel={onCancel}
+          />
         </form>
       </CardContent>
     </Card>
