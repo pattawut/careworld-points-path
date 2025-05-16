@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { ActivityGalleryItem } from './activity/ActivityGalleryItem';
 import { GalleryEmptyState } from './activity/GalleryEmptyState';
-import { GalleryLoading } from './activity/GalleryLoading';
+import { ActivityLoading } from './activity/ActivityLoading';
 
 type Activity = {
   id: string;
@@ -43,6 +43,7 @@ export const ActivityGallery = () => {
 
         if (!activitiesData || activitiesData.length === 0) {
           setActivities([]);
+          setLoading(false);
           return;
         }
 
@@ -90,22 +91,18 @@ export const ActivityGallery = () => {
   }, [toast]);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <GalleryLoading />
-      </div>
-    );
+    return <ActivityLoading />;
+  }
+
+  if (activities.length === 0) {
+    return <GalleryEmptyState />;
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {activities.length > 0 ? (
-        activities.map((activity) => (
-          <ActivityGalleryItem key={activity.id} activity={activity} />
-        ))
-      ) : (
-        <GalleryEmptyState />
-      )}
+      {activities.map((activity) => (
+        <ActivityGalleryItem key={activity.id} activity={activity} />
+      ))}
     </div>
   );
 };
