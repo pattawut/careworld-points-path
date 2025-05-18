@@ -29,6 +29,7 @@ import { th } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
+// กำหนด type สำหรับข้อมูลแคมเปญ
 type Campaign = {
   id: string;
   title: string;
@@ -62,13 +63,15 @@ export function AdminCampaigns() {
     const fetchCampaigns = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // เนื่องจาก types ยังไม่ถูกอัปเดต เราจำเป็นต้องใช้ any ชั่วคราว
+        const { data, error } = await (supabase as any)
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
           
         if (error) throw error;
         
+        // แปลงข้อมูลให้เป็นรูปแบบ Campaign[]
         setCampaigns(data as Campaign[]);
       } catch (error) {
         console.error('Error fetching campaigns:', error);
@@ -133,7 +136,7 @@ export function AdminCampaigns() {
       
       if (editingCampaign) {
         // อัปเดตแคมเปญ
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('campaigns')
           .update(campaignData)
           .eq('id', editingCampaign.id)
@@ -153,7 +156,7 @@ export function AdminCampaigns() {
         });
       } else {
         // สร้างแคมเปญใหม่
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('campaigns')
           .insert(campaignData)
           .select();
@@ -193,7 +196,7 @@ export function AdminCampaigns() {
     }
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('campaigns')
         .delete()
         .eq('id', id);

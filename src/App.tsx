@@ -17,6 +17,7 @@ import CampaignDetail from "./pages/CampaignDetail";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// ประกาศ query client สำหรับ React Query
 const queryClient = new QueryClient();
 
 const App = () => (

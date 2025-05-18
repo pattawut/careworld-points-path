@@ -24,7 +24,7 @@ export const Campaigns = () => {
     const fetchCampaigns = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('campaigns')
           .select('*')
           .limit(4)
@@ -34,7 +34,7 @@ export const Campaigns = () => {
           throw error;
         }
         
-        setCampaigns(data || []);
+        setCampaigns(data as Campaign[] || []);
       } catch (error) {
         console.error('Error fetching campaigns:', error);
         // ใช้ข้อมูลตัวอย่างในกรณีเกิดข้อผิดพลาด

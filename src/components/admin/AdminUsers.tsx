@@ -52,7 +52,7 @@ export function AdminUsers() {
         }
         
         // ดึงข้อมูล admin จาก user_roles
-        const { data: rolesData, error: rolesError } = await supabase
+        const { data: rolesData, error: rolesError } = await (supabase as any)
           .from('user_roles')
           .select('user_id, role')
           .eq('role', 'admin');
@@ -62,7 +62,7 @@ export function AdminUsers() {
         // สร้าง map ของ admin users
         const adminMap: Record<string, boolean> = {};
         if (rolesData) {
-          rolesData.forEach(role => {
+          rolesData.forEach((role: any) => {
             adminMap[role.user_id] = true;
           });
         }
@@ -105,7 +105,7 @@ export function AdminUsers() {
     try {
       if (user.is_admin) {
         // ถอดบทบาท admin
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('user_roles')
           .delete()
           .eq('user_id', user.id)
@@ -124,7 +124,7 @@ export function AdminUsers() {
         });
       } else {
         // เพิ่มบทบาท admin
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('user_roles')
           .insert({
             user_id: user.id,
