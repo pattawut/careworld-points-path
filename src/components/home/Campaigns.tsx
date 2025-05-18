@@ -1,11 +1,106 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+
+type Campaign = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+};
 
 export const Campaigns = () => {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select('*')
+          .limit(4)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        setCampaigns(data || []);
+      } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        // ใช้ข้อมูลตัวอย่างในกรณีเกิดข้อผิดพลาด
+        setCampaigns([
+          {
+            id: 'sample-1',
+            title: 'ถุงผ้ารักษ์โลก',
+            description: 'ร่วมรณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน แชร์ภาพการใช้ถุงผ้าสะสมแต้ม',
+            image_url: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=500&q=80',
+            start_date: null,
+            end_date: null,
+            status: 'active'
+          },
+          {
+            id: 'sample-2',
+            title: 'แก้วและหลอดรียูส',
+            description: 'ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ แชร์ภาพการใช้แก้วและหลอดส่วนตัวสะสมแต้ม',
+            image_url: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=500&q=80',
+            start_date: null,
+            end_date: null,
+            status: 'active'
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCampaigns();
+  }, []);
+
+  // ในกรณีข้อมูลไม่มี ใช้ข้อมูลตัวอย่าง 2 อัน
+  const displayCampaigns = campaigns.length > 0 ? campaigns : [
+    {
+      id: 'sample-1',
+      title: 'ถุงผ้ารักษ์โลก',
+      description: 'ร่วมรณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน แชร์ภาพการใช้ถุงผ้าสะสมแต้ม',
+      image_url: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=500&q=80',
+      start_date: null,
+      end_date: null,
+      status: 'active'
+    },
+    {
+      id: 'sample-2',
+      title: 'แก้วและหลอดรียูส',
+      description: 'ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ แชร์ภาพการใช้แก้วและหลอดส่วนตัวสะสมแต้ม',
+      image_url: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=500&q=80',
+      start_date: null,
+      end_date: null,
+      status: 'active'
+    }
+  ];
+  
+  // แปลงสถานะเป็นภาษาไทย
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'กำลังดำเนินการ';
+      case 'completed':
+        return 'สิ้นสุดแล้ว';
+      case 'upcoming':
+      default:
+        return 'กำลังจะมาถึง';
+    }
+  };
+
   return (
     <section className="py-20">
       <div className="container px-4 md:px-6">
@@ -17,55 +112,32 @@ export const Campaigns = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
-            <div className="aspect-video relative">
-              <img 
-                src="https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=500&q=80" 
-                alt="ถุงผ้ารักษ์โลก"
-                className="object-cover w-full h-full"
-              />
-              <div className="absolute top-3 right-3">
-                <Badge className="bg-eco-teal">กำลังดำเนินการ</Badge>
+          {displayCampaigns.slice(0, 2).map((campaign) => (
+            <Card key={campaign.id} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
+              <div className="aspect-video relative">
+                <img 
+                  src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
+                  alt={campaign.title}
+                  className="object-cover w-full h-full"
+                />
+                <div className="absolute top-3 right-3">
+                  <Badge className="bg-eco-teal">{getStatusText(campaign.status)}</Badge>
+                </div>
               </div>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-eco-blue mb-2">ถุงผ้ารักษ์โลก</h3>
-              <p className="text-gray-600 mb-4">
-                ร่วมรณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน แชร์ภาพการใช้ถุงผ้าสะสมแต้ม
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">คะแนน: 1 แต้ม/ครั้ง</span>
-                <Button asChild className="bg-eco-gradient hover:opacity-90">
-                  <Link to="/campaigns/bag">เข้าร่วม</Link>
-                </Button>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title}</h3>
+                <p className="text-gray-600 mb-4">
+                  {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">คะแนน: 1 แต้ม/ครั้ง</span>
+                  <Button asChild className="bg-eco-gradient hover:opacity-90">
+                    <Link to={`/campaigns/${campaign.id}`}>เข้าร่วม</Link>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Card>
-          
-          <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
-            <div className="aspect-video relative">
-              <img 
-                src="https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=500&q=80" 
-                alt="แก้วและหลอดรียูส"
-                className="object-cover w-full h-full"
-              />
-              <div className="absolute top-3 right-3">
-                <Badge className="bg-eco-teal">กำลังดำเนินการ</Badge>
-              </div>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-eco-blue mb-2">แก้วและหลอดรียูส</h3>
-              <p className="text-gray-600 mb-4">
-                ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ แชร์ภาพการใช้แก้วและหลอดส่วนตัวสะสมแต้ม
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">คะแนน: 1 แต้ม/ครั้ง</span>
-                <Button asChild className="bg-eco-gradient hover:opacity-90">
-                  <Link to="/campaigns/reuse">เข้าร่วม</Link>
-                </Button>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
         
         <div className="text-center mt-10">

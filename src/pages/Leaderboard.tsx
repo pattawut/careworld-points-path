@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -373,7 +372,7 @@ const Leaderboard = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow py-10 bg-eco-light">
-        <div className="container px-4 md:px-8">
+        <div className="container px-4 md:px-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-eco-blue mb-1">อันดับสมาชิก</h1>
