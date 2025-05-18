@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+
+import { useState, useEffect } from 'react';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +9,9 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { RecycleIcon, ShoppingBag, ImageIcon, Award, Calendar, Users, Leaf } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const campaignsData = {
   "bag": {
@@ -157,11 +161,45 @@ const CampaignDetail = () => {
   const [caption, setCaption] = useState('');
   const [activeTab, setActiveTab] = useState('about');
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Fallback if slug doesn't exist
   const campaign = slug && campaignsData[slug as keyof typeof campaignsData]
     ? campaignsData[slug as keyof typeof campaignsData]
     : campaignsData.bag; // Default to bag campaign
+  
+  useEffect(() => {
+    if (slug) {
+      fetchRecentActivities();
+    }
+  }, [slug]);
+
+  const fetchRecentActivities = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch activities related to this campaign type
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from('activities')
+        .select('*, user:user_id(full_name, avatar_url)')
+        .eq('activity_type', slug)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (activitiesError) {
+        throw activitiesError;
+      }
+
+      setRecentActivities(activitiesData || []);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -174,7 +212,16 @@ const CampaignDetail = () => {
     }
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาเข้าสู่ระบบ",
+        description: "คุณต้องเข้าสู่ระบบก่อนร่วมกิจกรรม",
+      });
+      return;
+    }
+    
     if (!preview) {
       toast({
         variant: "destructive",
@@ -192,16 +239,83 @@ const CampaignDetail = () => {
       });
       return;
     }
-    
-    // Mock submission success
-    toast({
-      title: "อัพโหลดสำเร็จ!",
-      description: `คุณได้รับ ${campaign.points} แต้มจากกิจกรรม ${campaign.title}`,
-    });
-    
-    // Reset form
-    setPreview(null);
-    setCaption('');
+
+    try {
+      setIsSubmitting(true);
+      
+      // Convert base64 to file
+      const base64Data = preview.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteArrays = [];
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArrays.push(byteCharacters.charCodeAt(i));
+      }
+      
+      const byteArray = new Uint8Array(byteArrays);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+      const file = new File([blob], `campaign-${slug}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Upload image to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('activity-images')
+        .upload(filePath, file);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get public URL for the uploaded image
+      const { data: publicUrlData } = supabase.storage
+        .from('activity-images')
+        .getPublicUrl(filePath);
+        
+      const imageUrl = publicUrlData.publicUrl;
+      
+      // Add activity to activities table
+      const { error: activityError } = await supabase
+        .from('activities')
+        .insert([{
+          user_id: user.id,
+          activity_type: slug || 'recycle',
+          description: caption,
+          image_url: imageUrl,
+          points: campaign.points || 1, // Use points from campaign
+        }]);
+        
+      if (activityError) {
+        throw activityError;
+      }
+      
+      // Fetch updated recent activities
+      fetchRecentActivities();
+      
+      toast({
+        title: "อัพโหลดสำเร็จ!",
+        description: `คุณได้รับ ${campaign.points} แต้มจากกิจกรรม ${campaign.title}`,
+      });
+      
+      // Reset form
+      setPreview(null);
+      setCaption('');
+      
+      // Navigate to gallery tab
+      setActiveTab('gallery');
+      
+    } catch (error: any) {
+      console.error('Error uploading activity:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถอัพโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleTabChange = (value: string) => {
@@ -211,6 +325,10 @@ const CampaignDetail = () => {
   const navigateToTab = (tabValue: string) => {
     setActiveTab(tabValue);
   };
+  
+  if (!user && activeTab === 'participate') {
+    return <Navigate to="/login" state={{ from: `/campaigns/${slug}` }} replace />;
+  }
   
   const CampaignIcon = campaign.icon;
   
@@ -376,6 +494,7 @@ const CampaignDetail = () => {
                                 size="sm"
                                 className="absolute top-2 right-2 bg-white"
                                 onClick={() => setPreview(null)}
+                                disabled={isSubmitting}
                               >
                                 เปลี่ยนรูป
                               </Button>
@@ -399,6 +518,7 @@ const CampaignDetail = () => {
                                   accept="image/*"
                                   className="hidden"
                                   onChange={handleImageChange}
+                                  disabled={isSubmitting}
                                 />
                               </label>
                             </div>
@@ -415,6 +535,7 @@ const CampaignDetail = () => {
                             placeholder={`อธิบายสั้นๆ เกี่ยวกับกิจกรรม ${campaign.title} ของคุณ...`}
                             value={caption}
                             onChange={(e) => setCaption(e.target.value)}
+                            disabled={isSubmitting}
                           />
                         </div>
                         
@@ -423,8 +544,9 @@ const CampaignDetail = () => {
                             onClick={handleSubmit}
                             className="w-full bg-eco-gradient hover:opacity-90"
                             size="lg"
+                            disabled={isSubmitting}
                           >
-                            อัพโหลดและรับแต้ม
+                            {isSubmitting ? 'กำลังอัพโหลด...' : 'อัพโหลดและรับแต้ม'}
                           </Button>
                           <p className="text-center text-sm text-gray-500">
                             รูปภาพที่อัพโหลดอาจถูกใช้เพื่อประชาสัมพันธ์กิจกรรม
@@ -443,31 +565,59 @@ const CampaignDetail = () => {
                   <p className="text-gray-600">ภาพกิจกรรมจากผู้เข้าร่วมกิจกรรม {campaign.title}</p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {campaign.gallery.map((item) => (
-                    <Card key={item.id} className="overflow-hidden border-none shadow-lg">
-                      <div className="aspect-square relative">
-                        <img 
-                          src={item.image} 
-                          alt={item.caption}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <CardContent className="pt-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
-                            <img src={`https://i.pravatar.cc/100?img=${item.id}`} alt={item.user} className="h-full w-full object-cover" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-eco-blue">{item.user}</p>
-                            <p className="text-xs text-gray-500">{item.date}</p>
-                          </div>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+                  </div>
+                ) : recentActivities.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {recentActivities.map((item) => (
+                      <Card key={item.id} className="overflow-hidden border-none shadow-lg">
+                        <div className="aspect-square relative">
+                          <img 
+                            src={item.image_url} 
+                            alt={item.description}
+                            className="object-cover w-full h-full"
+                          />
                         </div>
-                        <p className="text-gray-600 text-sm">{item.caption}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        <CardContent className="pt-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+                              <img 
+                                src={item.user?.avatar_url || `https://i.pravatar.cc/100?img=${Math.floor(Math.random() * 70)}`} 
+                                alt={item.user?.full_name || 'ผู้ใช้'} 
+                                className="h-full w-full object-cover" 
+                              />
+                            </div>
+                            <div>
+                              <p className="font-medium text-eco-blue">{item.user?.full_name || 'ผู้ใช้'}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-gray-600 text-sm">{item.description}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-white rounded-lg shadow">
+                    <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-medium text-gray-700 mb-2">ยังไม่มีรูปภาพในแกลเลอรี่</h3>
+                    <p className="text-gray-500 mb-6">เป็นคนแรกที่แชร์รูปภาพกิจกรรม {campaign.title}</p>
+                    <Button 
+                      onClick={() => navigateToTab('participate')}
+                      className="bg-eco-gradient hover:opacity-90"
+                    >
+                      ร่วมกิจกรรมเลย
+                    </Button>
+                  </div>
+                )}
                 
                 <div className="mt-8 text-center">
                   <p className="text-gray-600">

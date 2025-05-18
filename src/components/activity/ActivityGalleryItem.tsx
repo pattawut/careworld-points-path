@@ -19,9 +19,10 @@ interface ActivityGalleryItemProps {
       avatar_url: string | null;
     };
   };
+  showCaption?: boolean;
 }
 
-export const ActivityGalleryItem = ({ activity }: ActivityGalleryItemProps) => {
+export const ActivityGalleryItem = ({ activity, showCaption = false }: ActivityGalleryItemProps) => {
   return (
     <Card key={activity.id} className="border-none shadow-md overflow-hidden">
       <div className="h-48 overflow-hidden">
@@ -50,7 +51,11 @@ export const ActivityGalleryItem = ({ activity }: ActivityGalleryItemProps) => {
             <ActivityBadge type={activity.activity_type} />
           </div>
         </div>
-        <p className="text-gray-700 line-clamp-2">{activity.description}</p>
+        
+        {showCaption && (
+          <p className="text-gray-700 line-clamp-2 mb-2">{activity.description}</p>
+        )}
+        
         <div className="mt-2 text-right">
           <span className="text-sm font-medium text-eco-teal">+{activity.points} แต้ม</span>
         </div>

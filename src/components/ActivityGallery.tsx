@@ -20,7 +20,12 @@ type Activity = {
   };
 };
 
-export const ActivityGallery = () => {
+type ActivityGalleryProps = {
+  showCaption?: boolean;
+  limit?: number;
+}
+
+export const ActivityGallery = ({ showCaption = false, limit = 6 }: ActivityGalleryProps) => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -35,7 +40,7 @@ export const ActivityGallery = () => {
           .from('activities')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(6);
+          .limit(limit);
 
         if (activitiesError) {
           throw activitiesError;
@@ -88,7 +93,7 @@ export const ActivityGallery = () => {
     };
 
     fetchActivities();
-  }, [toast]);
+  }, [toast, limit]);
 
   if (loading) {
     return <ActivityLoading />;
@@ -101,7 +106,7 @@ export const ActivityGallery = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {activities.map((activity) => (
-        <ActivityGalleryItem key={activity.id} activity={activity} />
+        <ActivityGalleryItem key={activity.id} activity={activity} showCaption={showCaption} />
       ))}
     </div>
   );
