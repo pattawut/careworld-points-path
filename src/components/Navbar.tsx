@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +18,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Menu, X, LogOut, User, Settings } from 'lucide-react';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from './ui/badge';
 
 const links = [
@@ -36,7 +35,7 @@ export function Navbar() {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [isAdmin, setIsAdmin] = useState(false);
 
   // ตรวจสอบว่าผู้ใช้เป็น admin หรือไม่
