@@ -24,7 +24,7 @@ import { Badge } from './ui/badge';
 const links = [
   { name: 'หน้าหลัก', href: '/' },
   { name: 'แอคทิวิตี้', href: '/activities' },
-  { name: 'กิจกรรม', href: '/campaigns' },
+  { name: 'แคมเปญ', href: '/campaigns' },
   { name: 'ความรู้', href: '/education' },
   { name: 'อันดับ', href: '/leaderboard' },
 ];
@@ -92,7 +92,7 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="bg-gradient-to-r from-eco-teal to-eco-blue bg-clip-text text-xl font-bold text-transparent">
-              EcoLife
+              CareWorld รักษ์โลก
             </span>
           </Link>
           <nav className="hidden md:flex gap-6 ml-6">
@@ -217,7 +217,7 @@ export function Navbar() {
               <SheetContent side="right">
                 <SheetHeader>
                   <SheetTitle className="bg-gradient-to-r from-eco-teal to-eco-blue bg-clip-text text-xl font-bold text-transparent">
-                    EcoLife
+                    CareWorld รักษ์โลก
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-4 mt-6">

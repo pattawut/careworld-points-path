@@ -15,6 +15,7 @@ import Activities from "./pages/Activities";
 import Education from "./pages/Education";
 import CampaignDetail from "./pages/CampaignDetail";
 import ProfilePage from "./pages/ProfilePage";
+import Campaigns from "./pages/Campaigns";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -49,6 +50,7 @@ const App = () => (
             } />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/activities" element={<Activities />} />
+            <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/education" element={<Education />} />
             <Route path="/campaigns/:slug" element={<CampaignDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

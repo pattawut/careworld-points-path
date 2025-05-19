@@ -17,7 +17,7 @@ type AuthContextType = {
   profile: Profile | null;
   session: Session | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{
+  signUp: (email: string, password: string, fullName: string, isAdmin?: boolean) => Promise<{
     error: string | null;
     success: boolean;
   }>;
@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // First set up the auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -59,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.email);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -89,14 +91,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data) {
         setProfile(data as Profile);
+        console.log("Profile data fetched:", data);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const createAdminRole = async (userId: string) => {
     try {
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'admin'
+        });
+
+      if (error) {
+        console.error('Error creating admin role:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating admin role:', error);
+      return false;
+    }
+  };
+
+  const signUp = async (email: string, password: string, fullName: string, isAdmin = false) => {
+    try {
+      console.log("Signing up user:", email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -108,11 +133,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        console.error("Signup error:", error);
         return { error: error.message, success: false };
       }
 
       // Success but needs email verification
       if (data.user && !data.session) {
+        console.log("User created but needs email verification");
         return { 
           error: null, 
           success: true 
@@ -120,9 +147,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Auto sign in (if email verification is disabled)
-      if (data.session) {
+      if (data.session && data.user) {
+        console.log("User signed up and logged in automatically");
         setSession(data.session);
         setUser(data.user);
+        
+        // If this is meant to be an admin, create the admin role
+        if (isAdmin) {
+          const adminCreated = await createAdminRole(data.user.id);
+          if (!adminCreated) {
+            return { 
+              error: "สมัครสมาชิกสำเร็จ แต่ไม่สามารถกำหนดสิทธิ์แอดมินได้", 
+              success: true 
+            };
+          }
+        }
+        
         return { error: null, success: true };
       }
 
@@ -138,15 +178,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Signing in user:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("Login error:", error);
         return { error: error.message, success: false };
       }
 
+      console.log("User logged in successfully");
       setSession(data.session);
       setUser(data.user);
       
@@ -167,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      console.log("Signing out user");
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
