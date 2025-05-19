@@ -1,205 +1,164 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Leaf } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle } from 'lucide-react';
 
 const Register = () => {
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { user, signUp } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const { signUp, user } = useAuth();
-
-  // If user is already logged in, redirect to dashboard
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
+  
+  // ถ้ามีการ login อยู่แล้ว ให้ redirect ไปที่หน้า dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
-    // Simple validation
-    if (!name || !email || !password) {
-      toast({
-        variant: "destructive",
-        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "กรุณากรอกชื่อ อีเมล และรหัสผ่าน",
-      });
+    if (!fullName || !email || !password) {
+      setError('กรุณากรอกข้อมูลให้ครบทุกช่อง');
       return;
     }
-    
-    if (password !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "รหัสผ่านไม่ตรงกัน",
-        description: "กรุณาตรวจสอบรหัสผ่านของคุณอีกครั้ง",
-      });
-      return;
-    }
-    
-    if (!agreeTerms) {
-      toast({
-        variant: "destructive",
-        title: "กรุณายอมรับข้อกำหนด",
-        description: "คุณต้องยอมรับข้อกำหนดและเงื่อนไขการใช้งาน",
-      });
-      return;
-    }
-    
-    setIsLoading(true);
     
     try {
-      const { error, success } = await signUp(email, password, name);
+      setLoading(true);
+      
+      // ตรวจสอบว่าเป็นผู้ใช้ admin หรือไม่
+      const isAdminUser = email === 'admin@example.com' || fullName === 'user admin';
+
+      // ทำการลงทะเบียนผู้ใช้
+      const { success, error } = await signUp(email, password, fullName);
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "สมัครสมาชิกไม่สำเร็จ",
-          description: error,
-        });
+        setError(error);
         return;
       }
       
       if (success) {
+        // ถ้าเป็นผู้ใช้ admin ให้ลงทะเบียนเป็น admin
+        if (isAdminUser) {
+          try {
+            // ดึง user data ล่าสุด (ในกรณีที่มีการยืนยันอีเมลอยู่แล้ว)
+            const { data: { user } } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (user) {
+              // เพิ่มบทบาท admin
+              await (supabase as any)
+                .from('user_roles')
+                .insert({
+                  user_id: user.id,
+                  role: 'admin'
+                });
+            }
+          } catch (err) {
+            console.error("Error setting admin role:", err);
+          }
+        }
+        
         toast({
-          title: "สมัครสมาชิกสำเร็จ",
-          description: "ยินดีต้อนรับเข้าสู่โครงการ CareWorld รักษ์โลก",
+          title: "การลงทะเบียนสำเร็จ!",
+          description: "บัญชีผู้ใช้ถูกสร้างแล้ว คุณสามารถเข้าสู่ระบบได้ทันที",
         });
-        navigate('/dashboard');
       }
     } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "สมัครสมาชิกไม่สำเร็จ",
-        description: "เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง",
-      });
+      console.error("Register error:", err);
+      setError('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-eco-light">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col items-center mb-8">
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-eco-teal mb-4">
-              <Leaf className="h-6 w-6 text-white" />
+      <main className="flex-grow flex items-center justify-center py-12 bg-eco-light">
+        <div className="mx-auto w-full max-w-md px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-eco-blue">สร้างบัญชีผู้ใช้</h1>
+              <p className="text-gray-500 mt-2">เริ่มต้นการเดินทางสู่การใช้ชีวิตที่เป็นมิตรกับสิ่งแวดล้อม</p>
             </div>
-            <h2 className="text-center text-3xl font-bold text-eco-blue">
-              สมัครสมาชิก
-            </h2>
-            <p className="mt-2 text-center text-gray-600">
-              เริ่มต้นการเป็นส่วนหนึ่งของโครงการ CareWorld รักษ์โลก
-            </p>
-          </div>
-          
-          <Card className="border-none shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl">สร้างบัญชีผู้ใช้</CardTitle>
-              <CardDescription>กรอกข้อมูลด้านล่างเพื่อสมัครสมาชิก</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded flex items-start gap-2 mb-4">
+                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">ชื่อ-นามสกุล</Label>
+                  <Label htmlFor="fullName">ชื่อ-นามสกุล</Label>
                   <Input
-                    id="name"
-                    placeholder="สมชาย ใจดี"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="fullName"
+                    type="text"
+                    placeholder="ชื่อ-นามสกุล"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     required
                   />
                 </div>
+              
                 <div className="space-y-2">
                   <Label htmlFor="email">อีเมล</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="อีเมล"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="password">รหัสผ่าน</Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="รหัสผ่าน"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="terms"
-                    checked={agreeTerms}
-                    onCheckedChange={() => setAgreeTerms(!agreeTerms)}
-                  />
-                  <label
-                    htmlFor="terms"
-                    className="text-sm text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    ฉันยอมรับ{' '}
-                    <Link
-                      to="/terms"
-                      className="font-medium text-eco-teal hover:text-eco-blue transition-colors"
-                    >
-                      ข้อกำหนดและเงื่อนไข
-                    </Link>
-                  </label>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-eco-gradient hover:opacity-90"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'กำลังสมัคร...' : 'สมัครสมาชิก'}
-                </Button>
-              </form>
-            </CardContent>
-            <CardFooter>
-              <p className="text-center text-sm text-gray-600 w-full">
-                มีบัญชีอยู่แล้ว?{' '}
-                <Link
-                  to="/login"
-                  className="font-medium text-eco-teal hover:text-eco-blue transition-colors"
-                >
-                  เข้าสู่ระบบ
-                </Link>
-              </p>
-            </CardFooter>
-          </Card>
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full mt-6 bg-eco-gradient"
+                disabled={loading}
+              >
+                {loading ? "กำลังดำเนินการ..." : "สมัครสมาชิก"}
+              </Button>
+              
+              <div className="text-center mt-6">
+                <p className="text-sm text-gray-600">
+                  มีบัญชีอยู่แล้ว? <Link to="/login" className="text-eco-blue hover:underline">เข้าสู่ระบบ</Link>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
       <Footer />

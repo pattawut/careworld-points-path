@@ -10,11 +10,31 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Shield, ShieldCheck } from 'lucide-react';
+import { Search, Shield, ShieldCheck, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 type UserProfile = {
   id: string;
@@ -26,69 +46,101 @@ type UserProfile = {
   email?: string;
 };
 
+// Schema for user edit form
+const userFormSchema = z.object({
+  full_name: z.string().min(2, {
+    message: "ชื่อต้องมีความยาวอย่างน้อย 2 ตัวอักษร",
+  }),
+  email: z.string().email({
+    message: "อีเมลไม่ถูกต้อง",
+  }).optional(),
+});
+
+type UserFormValues = z.infer<typeof userFormSchema>;
+
 export function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      full_name: '',
+    },
+  });
   
   // โหลดข้อมูลผู้ใช้
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        // ดึงข้อมูลผู้ใช้จาก profiles
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (profilesError) throw profilesError;
-        
-        if (!profilesData) {
-          setUsers([]);
-          setLoading(false);
-          return;
-        }
-        
-        // ดึงข้อมูล admin จาก user_roles
-        const { data: rolesData, error: rolesError } = await (supabase as any)
-          .from('user_roles')
-          .select('user_id, role')
-          .eq('role', 'admin');
-          
-        if (rolesError) throw rolesError;
-        
-        // สร้าง map ของ admin users
-        const adminMap: Record<string, boolean> = {};
-        if (rolesData) {
-          rolesData.forEach((role: any) => {
-            adminMap[role.user_id] = true;
-          });
-        }
-        
-        // รวมข้อมูลจาก profiles และ admin status
-        const enhancedProfiles: UserProfile[] = profilesData.map(profile => ({
-          ...profile,
-          is_admin: !!adminMap[profile.id]
-        }));
-        
-        setUsers(enhancedProfiles);
-        
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast({
-          variant: "destructive",
-          title: "เกิดข้อผิดพลาด",
-          description: "ไม่สามารถโหลดข้อมูลผู้ใช้ได้"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchUsers();
-  }, [toast]);
+  }, []);
+  
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // ดึงข้อมูลผู้ใช้จาก profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (profilesError) throw profilesError;
+      
+      if (!profilesData) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+      
+      // ดึงข้อมูล admin จาก user_roles
+      const { data: rolesData, error: rolesError } = await (supabase as any)
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('role', 'admin');
+        
+      if (rolesError) throw rolesError;
+      
+      // สร้าง map ของ admin users
+      const adminMap: Record<string, boolean> = {};
+      if (rolesData) {
+        rolesData.forEach((role: any) => {
+          adminMap[role.user_id] = true;
+        });
+      }
+      
+      // ดึงข้อมูลอีเมลจาก auth.users (ต้องใช้ admin policy ใน database)
+      const { data: userData, error: userError } = await (supabase as any).auth.admin.listUsers();
+      
+      const emailMap: Record<string, string> = {};
+      if (userData?.users) {
+        userData.users.forEach((user: any) => {
+          emailMap[user.id] = user.email;
+        });
+      }
+      
+      // รวมข้อมูลจาก profiles และ admin status
+      const enhancedProfiles: UserProfile[] = profilesData.map(profile => ({
+        ...profile,
+        is_admin: !!adminMap[profile.id],
+        email: emailMap[profile.id]
+      }));
+      
+      setUsers(enhancedProfiles);
+      
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลผู้ใช้ได้"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // กรองข้อมูลผู้ใช้ตามคำค้นหา
   const filteredUsers = users.filter(user => {
@@ -149,6 +201,51 @@ export function AdminUsers() {
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถเปลี่ยนแปลงสถานะแอดมินได้"
+      });
+    }
+  };
+
+  // เปิด dialog แก้ไขข้อมูลผู้ใช้
+  const openEditDialog = (user: UserProfile) => {
+    setSelectedUser(user);
+    form.reset({
+      full_name: user.full_name || '',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  // บันทึกข้อมูลผู้ใช้ที่แก้ไข
+  const handleEditUser = async (values: UserFormValues) => {
+    if (!selectedUser) return;
+    
+    try {
+      // อัปเดตข้อมูลใน profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: values.full_name,
+        })
+        .eq('id', selectedUser.id);
+      
+      if (profileError) throw profileError;
+      
+      // อัปเดตข้อมูลในสเตท
+      setUsers(prev =>
+        prev.map(u => u.id === selectedUser.id ? { ...u, full_name: values.full_name } : u)
+      );
+      
+      toast({
+        title: "สำเร็จ",
+        description: `อัปเดตข้อมูลของ ${values.full_name} แล้ว`
+      });
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถอัปเดตข้อมูลผู้ใช้ได้"
       });
     }
   };
@@ -236,15 +333,25 @@ export function AdminUsers() {
                         )}
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <Button
-                          size="sm"
-                          variant={user.is_admin ? "destructive" : "outline"}
-                          className={!user.is_admin ? "border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white" : ""}
-                          onClick={() => toggleAdminStatus(user)}
-                        >
-                          <Shield className="h-4 w-4 mr-2" />
-                          {user.is_admin ? 'ยกเลิกแอดมิน' : 'ตั้งเป็นแอดมิน'}
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(user)}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            แก้ไข
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={user.is_admin ? "destructive" : "outline"}
+                            className={!user.is_admin ? "border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white" : ""}
+                            onClick={() => toggleAdminStatus(user)}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            {user.is_admin ? 'ยกเลิกแอดมิน' : 'ตั้งเป็นแอดมิน'}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -263,6 +370,43 @@ export function AdminUsers() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog สำหรับแก้ไขข้อมูลผู้ใช้ */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>แก้ไขข้อมูลผู้ใช้</DialogTitle>
+            <DialogDescription>
+              แก้ไขข้อมูลของผู้ใช้งาน อัปเดตข้อมูลและกดบันทึกเมื่อเสร็จสิ้น
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditUser)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ชื่อ-นามสกุล</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ชื่อผู้ใช้" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  ยกเลิก
+                </Button>
+                <Button type="submit">บันทึก</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

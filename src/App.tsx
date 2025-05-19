@@ -14,6 +14,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Activities from "./pages/Activities";
 import Education from "./pages/Education";
 import CampaignDetail from "./pages/CampaignDetail";
+import ProfilePage from "./pages/ProfilePage";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -39,6 +40,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
               </ProtectedRoute>
             } />
             <Route path="/leaderboard" element={<Leaderboard />} />
