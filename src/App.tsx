@@ -16,7 +16,7 @@ import Education from "./pages/Education";
 import CampaignDetail from "./pages/CampaignDetail";
 import ProfilePage from "./pages/ProfilePage";
 import Campaigns from "./pages/Campaigns";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider } from "./context/auth";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // ประกาศ query client สำหรับ React Query
