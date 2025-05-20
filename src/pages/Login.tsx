@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
@@ -45,19 +44,17 @@ const Login = () => {
           
           // Check if the admin email already exists as a user
           const adminEmail = 'admin@gmail.com';
-          const { data: existingUsersList, error: listUsersError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', adminEmail)
-            .maybeSingle();
-            
-          if (listUsersError) {
-            console.error('Error checking for existing user:', listUsersError);
-            return;
-          }
           
-          // If user doesn't exist, create it
-          if (!existingUsersList) {
+          // Try to sign in with admin credentials to check if account exists
+          const { data: signInCheck, error: signInError } = await supabase.auth.signInWithPassword({
+            email: adminEmail,
+            password: '@Test1234'
+          });
+          
+          // If sign in fails with auth/user-not-found, create the admin user
+          if (signInError) {
+            console.log('Admin account does not exist, creating it');
+            
             const adminPassword = '@Test1234';
             const adminName = 'System Administrator';
             
@@ -101,14 +98,15 @@ const Login = () => {
                 description: "บัญชีแอดมินถูกสร้างขึ้นเรียบร้อยแล้ว (admin@gmail.com)",
               });
             }
-          } else {
-            console.log('Admin user already exists, adding role if needed');
+          } else if (signInCheck?.user) {
+            // User exists but might not have admin role
+            console.log('Admin user exists, checking for admin role');
             
             // Check if the user has the admin role
             const { data: hasAdminRole, error: roleCheckError } = await supabase
               .from('user_roles')
               .select('*')
-              .eq('user_id', existingUsersList.id)
+              .eq('user_id', signInCheck.user.id)
               .eq('role', 'admin')
               .maybeSingle();
               
@@ -122,7 +120,7 @@ const Login = () => {
               const { error: roleInsertError } = await supabase
                 .from('user_roles')
                 .insert({
-                  user_id: existingUsersList.id,
+                  user_id: signInCheck.user.id,
                   role: 'admin'
                 });
                 
