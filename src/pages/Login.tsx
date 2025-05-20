@@ -44,16 +44,20 @@ const Login = () => {
           console.log('No admin found, creating default admin account');
           
           // Check if the admin email already exists as a user
-          const { data: existingUser, error: emailCheckError } = await supabase
-            .auth.admin.getUserByEmail('admin@gmail.com');
+          const adminEmail = 'admin@gmail.com';
+          const { data: existingUsersList, error: listUsersError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', adminEmail)
+            .maybeSingle();
             
-          if (emailCheckError && emailCheckError.message !== 'User not found') {
-            console.error('Error checking for existing user:', emailCheckError);
+          if (listUsersError) {
+            console.error('Error checking for existing user:', listUsersError);
+            return;
           }
           
           // If user doesn't exist, create it
-          if (!existingUser) {
-            const adminEmail = 'admin@gmail.com';
+          if (!existingUsersList) {
             const adminPassword = '@Test1234';
             const adminName = 'System Administrator';
             
@@ -104,7 +108,7 @@ const Login = () => {
             const { data: hasAdminRole, error: roleCheckError } = await supabase
               .from('user_roles')
               .select('*')
-              .eq('user_id', existingUser.id)
+              .eq('user_id', existingUsersList.id)
               .eq('role', 'admin')
               .maybeSingle();
               
@@ -118,7 +122,7 @@ const Login = () => {
               const { error: roleInsertError } = await supabase
                 .from('user_roles')
                 .insert({
-                  user_id: existingUser.id,
+                  user_id: existingUsersList.id,
                   role: 'admin'
                 });
                 
