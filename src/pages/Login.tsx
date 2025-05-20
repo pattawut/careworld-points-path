@@ -1,20 +1,16 @@
-import { useState, useEffect } from 'react';
+
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
+import { createAdminAccount } from '@/utils/adminAccountSetup';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,162 +20,8 @@ const Login = () => {
     }
     
     // Create admin account if it doesn't exist
-    const createAdminAccount = async () => {
-      try {
-        console.log("Checking for admin account...");
-        
-        // Check if admin user exists
-        const { data: existingUsers, error: userCheckError } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'admin');
-          
-        if (userCheckError) {
-          console.error('Error checking admin roles:', userCheckError);
-          return;
-        }
-        
-        if (!existingUsers || existingUsers.length === 0) {
-          console.log('No admin found, creating default admin account');
-          
-          // Check if the admin email already exists as a user
-          const adminEmail = 'admin@gmail.com';
-          
-          // Try to sign in with admin credentials to check if account exists
-          const { data: signInCheck, error: signInError } = await supabase.auth.signInWithPassword({
-            email: adminEmail,
-            password: '@Test1234'
-          });
-          
-          // If sign in fails with auth/user-not-found, create the admin user
-          if (signInError) {
-            console.log('Admin account does not exist, creating it');
-            
-            const adminPassword = '@Test1234';
-            const adminName = 'System Administrator';
-            
-            console.log('Creating admin account with email:', adminEmail);
-            
-            // Create admin user
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-              email: adminEmail,
-              password: adminPassword,
-              options: {
-                data: {
-                  name: adminName,
-                }
-              }
-            });
-            
-            if (signUpError) {
-              console.error('Error creating admin account:', signUpError);
-              return;
-            }
-            
-            // If admin user was created, create role
-            if (signUpData?.user) {
-              console.log('Admin user created, creating admin role for:', signUpData.user.id);
-              
-              // Create admin role
-              const { error: roleError } = await supabase
-                .from('user_roles')
-                .insert({
-                  user_id: signUpData.user.id,
-                  role: 'admin'
-                });
-                
-              if (roleError) {
-                console.error('Error creating admin role:', roleError);
-                return;
-              }
-              
-              toast({
-                title: "บัญชีแอดมินถูกสร้างขึ้น",
-                description: "บัญชีแอดมินถูกสร้างขึ้นเรียบร้อยแล้ว (admin@gmail.com)",
-              });
-            }
-          } else if (signInCheck?.user) {
-            // User exists but might not have admin role
-            console.log('Admin user exists, checking for admin role');
-            
-            // Check if the user has the admin role
-            const { data: hasAdminRole, error: roleCheckError } = await supabase
-              .from('user_roles')
-              .select('*')
-              .eq('user_id', signInCheck.user.id)
-              .eq('role', 'admin')
-              .maybeSingle();
-              
-            if (roleCheckError) {
-              console.error('Error checking admin role:', roleCheckError);
-              return;
-            }
-            
-            // If the user doesn't have the admin role, add it
-            if (!hasAdminRole) {
-              const { error: roleInsertError } = await supabase
-                .from('user_roles')
-                .insert({
-                  user_id: signInCheck.user.id,
-                  role: 'admin'
-                });
-                
-              if (roleInsertError) {
-                console.error('Error adding admin role:', roleInsertError);
-                return;
-              }
-              
-              toast({
-                title: "บัญชีแอดมินถูกอัปเดต",
-                description: "บัญชี admin@gmail.com ได้รับสิทธิ์แอดมินแล้ว",
-              });
-            }
-          }
-        } else {
-          console.log('Admin account already exists');
-        }
-      } catch (error) {
-        console.error('Error setting up admin account:', error);
-      }
-    };
-    
     createAdminAccount();
   }, [user, navigate]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { error, success } = await signIn(email, password);
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "เข้าสู่ระบบไม่สำเร็จ",
-          description: error,
-        });
-        return;
-      }
-
-      if (success) {
-        toast({
-          title: "เข้าสู่ระบบสำเร็จ",
-          description: "ยินดีต้อนรับกลับมา!",
-        });
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        variant: "destructive",
-        title: "เข้าสู่ระบบไม่สำเร็จ",
-        description: "เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -194,54 +36,10 @@ const Login = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">อีเมล</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="your@email.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label htmlFor="password">รหัสผ่าน</Label>
-                    <Link to="#" className="text-sm text-eco-blue hover:underline">ลืมรหัสผ่าน?</Link>
-                  </div>
-                  <Input 
-                    id="password" 
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-eco-gradient" disabled={isLoading}>
-                  {isLoading ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ"}
-                </Button>
-              </form>
+              <LoginForm />
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <div className="text-center text-sm text-gray-600">
-                หรือเข้าสู่ระบบด้วย
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                <Button variant="outline" className="w-full">
-                  <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 5C13.66 5 15 6.34 15 8C15 9.66 13.66 11 12 11C10.34 11 9 9.66 9 8C9 6.34 10.34 5 12 5ZM12 19.2C9.5 19.2 7.29 17.92 6 15.98C6.03 13.99 10 12.9 12 12.9C13.99 12.9 17.97 13.99 18 15.98C16.71 17.92 14.5 19.2 12 19.2Z"/>
-                  </svg>
-                  เข้าสู่ระบบด้วย Google
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 16.84 5.44 20.87 10 21.8V15H8V12H10V9.5C10 7.57 11.57 6 13.5 6H16V9H14C13.45 9 13 9.45 13 10V12H16V15H13V21.95C18.05 21.45 22 17.19 22 12Z"/>
-                  </svg>
-                  เข้าสู่ระบบด้วย Facebook
-                </Button>
-              </div>
+              <SocialLoginButtons />
               <div className="text-center text-sm mt-2">
                 ยังไม่มีบัญชี? <Link to="/register" className="text-eco-blue hover:underline">สมัครสมาชิก</Link>
               </div>
