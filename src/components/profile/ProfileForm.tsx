@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 // Schema for profile form
 const profileFormSchema = z.object({
@@ -36,6 +37,7 @@ type ProfileFormProps = {
 
 export function ProfileForm({ userId, initialFullName, initialEmail, onPasswordDialogOpen }: ProfileFormProps) {
   const { toast } = useToast();
+  const auth = useAuth();
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -77,6 +79,14 @@ export function ProfileForm({ userId, initialFullName, initialEmail, onPasswordD
         title: "อัปเดตข้อมูลสำเร็จ",
         description: "ข้อมูลโปรไฟล์ของคุณถูกอัปเดตแล้ว",
       });
+
+      // Force refresh profile data
+      if (auth.user) {
+        // Create a brief delay to allow the update to complete
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({

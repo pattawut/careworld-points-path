@@ -24,37 +24,125 @@ const Login = () => {
       navigate('/dashboard');
     }
     
-    // Check if admin account exists, if not create it
-    const checkAdminAccount = async () => {
-      const adminEmail = 'admin@gmail.com';
-      
-      // Check if user exists
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
+    // Create admin account if it doesn't exist
+    const createAdminAccount = async () => {
+      try {
+        console.log("Checking for admin account...");
         
-      if (checkError) {
-        console.error('Error checking for admin account:', checkError);
-        return;
-      }
-      
-      // If no admin exists, create one
-      if (!existingUsers || existingUsers.length === 0) {
-        console.log('No admin account found, creating default admin account');
+        // Check if admin user exists
+        const { data: existingUsers, error: userCheckError } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+          
+        if (userCheckError) {
+          console.error('Error checking admin roles:', userCheckError);
+          return;
+        }
         
-        // Create admin account
-        await signUp(adminEmail, '@Test1234', 'System Administrator', true);
-        
-        toast({
-          title: "บัญชีแอดมินถูกสร้างขึ้น",
-          description: "บัญชีแอดมินถูกสร้างขึ้นเรียบร้อยแล้ว",
-        });
+        if (!existingUsers || existingUsers.length === 0) {
+          console.log('No admin found, creating default admin account');
+          
+          // Check if the admin email already exists as a user
+          const { data: existingUser, error: emailCheckError } = await supabase
+            .auth.admin.getUserByEmail('admin@gmail.com');
+            
+          if (emailCheckError && emailCheckError.message !== 'User not found') {
+            console.error('Error checking for existing user:', emailCheckError);
+          }
+          
+          // If user doesn't exist, create it
+          if (!existingUser) {
+            const adminEmail = 'admin@gmail.com';
+            const adminPassword = '@Test1234';
+            const adminName = 'System Administrator';
+            
+            console.log('Creating admin account with email:', adminEmail);
+            
+            // Create admin user
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+              email: adminEmail,
+              password: adminPassword,
+              options: {
+                data: {
+                  name: adminName,
+                }
+              }
+            });
+            
+            if (signUpError) {
+              console.error('Error creating admin account:', signUpError);
+              return;
+            }
+            
+            // If admin user was created, create role
+            if (signUpData?.user) {
+              console.log('Admin user created, creating admin role for:', signUpData.user.id);
+              
+              // Create admin role
+              const { error: roleError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: signUpData.user.id,
+                  role: 'admin'
+                });
+                
+              if (roleError) {
+                console.error('Error creating admin role:', roleError);
+                return;
+              }
+              
+              toast({
+                title: "บัญชีแอดมินถูกสร้างขึ้น",
+                description: "บัญชีแอดมินถูกสร้างขึ้นเรียบร้อยแล้ว (admin@gmail.com)",
+              });
+            }
+          } else {
+            console.log('Admin user already exists, adding role if needed');
+            
+            // Check if the user has the admin role
+            const { data: hasAdminRole, error: roleCheckError } = await supabase
+              .from('user_roles')
+              .select('*')
+              .eq('user_id', existingUser.id)
+              .eq('role', 'admin')
+              .maybeSingle();
+              
+            if (roleCheckError) {
+              console.error('Error checking admin role:', roleCheckError);
+              return;
+            }
+            
+            // If the user doesn't have the admin role, add it
+            if (!hasAdminRole) {
+              const { error: roleInsertError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: existingUser.id,
+                  role: 'admin'
+                });
+                
+              if (roleInsertError) {
+                console.error('Error adding admin role:', roleInsertError);
+                return;
+              }
+              
+              toast({
+                title: "บัญชีแอดมินถูกอัปเดต",
+                description: "บัญชี admin@gmail.com ได้รับสิทธิ์แอดมินแล้ว",
+              });
+            }
+          }
+        } else {
+          console.log('Admin account already exists');
+        }
+      } catch (error) {
+        console.error('Error setting up admin account:', error);
       }
     };
     
-    checkAdminAccount();
-  }, [user, navigate, signUp]);
+    createAdminAccount();
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

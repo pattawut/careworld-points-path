@@ -11,28 +11,22 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, session, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    // Only proceed if we've finished the initial loading
-    if (!isLoading) {
-      // If no user is found after loading is complete, redirect to login
-      if (!user || !session) {
-        toast({
-          variant: "destructive",
-          title: "กรุณาเข้าสู่ระบบ",
-          description: "คุณต้องเข้าสู่ระบบเพื่อเข้าถึงหน้านี้",
-        });
-        navigate('/login', { replace: true });
-      } else {
-        console.log("Protected route - User authenticated:", user.email);
-        setAuthChecked(true);
-      }
+    if (!isLoading && (!user || !session)) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาเข้าสู่ระบบ",
+        description: "คุณต้องเข้าสู่ระบบเพื่อเข้าถึงหน้านี้",
+      });
+      navigate('/login', { replace: true });
+    } else if (!isLoading && user) {
+      console.log("Protected route - User authenticated:", user.email);
     }
   }, [user, session, isLoading, navigate]);
 
-  // While loading or checking auth, show loading state
-  if (isLoading || !authChecked) {
+  // While loading, show loading state
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-2">
@@ -43,7 +37,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // If we've checked auth and we have a user, render the children
+  // If we have a user and session, render the children
   return user && session ? <>{children}</> : null;
 };
 
