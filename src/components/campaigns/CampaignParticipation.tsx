@@ -137,22 +137,7 @@ export const CampaignParticipation = ({
         }
       }
 
-      // สร้าง point log สำหรับการได้รับคะแนน
-      const { error: pointLogError } = await supabase
-        .from('user_point_logs')
-        .insert({
-          user_id: user.id,
-          campaign_id: newActivity.id,
-          points: campaign.points,
-          activity_type: campaign.activity_type,
-          description: `เข้าร่วมแคมเปญ: ${campaign.title}`,
-          action_type: 'earned'
-        });
-
-      if (pointLogError) {
-        console.error('Error creating point log:', pointLogError);
-        // ไม่ throw error เพื่อให้การสร้างกิจกรรมดำเนินต่อไปได้
-      }
+      // ไม่ต้องสร้าง point log เพิ่มเติม เพราะ trigger handle_campaign_points จะจัดการให้
 
       toast({
         title: "เข้าร่วมสำเร็จ!",
