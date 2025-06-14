@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/auth';
+import { ImageUpload } from './ImageUpload';
 
 interface Campaign {
   id: string;
@@ -120,7 +121,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {campaign ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'}
@@ -153,16 +154,10 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">URL รูปภาพ</Label>
-            <Input
-              id="imageUrl"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              type="url"
-            />
-          </div>
+          <ImageUpload
+            imageUrl={imageUrl}
+            onImageUrlChange={setImageUrl}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
