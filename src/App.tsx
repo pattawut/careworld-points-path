@@ -52,7 +52,7 @@ const App = () => (
             <Route path="/activities" element={<Navigate to="/campaigns" replace />} />
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/education" element={<Education />} />
-            <Route path="/campaigns/:slug" element={<CampaignDetail />} />
+            <Route path="/campaigns/:id" element={<CampaignDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
