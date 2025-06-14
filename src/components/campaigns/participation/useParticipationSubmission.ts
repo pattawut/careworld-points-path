@@ -54,6 +54,19 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
     try {
       console.log('Starting file upload...');
       
+      // Get user profile for name
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      }
+
+      const userName = userProfile?.full_name || 'ผู้ใช้';
+      
       // Upload image to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${user.id}.${fileExt}`;
@@ -81,7 +94,7 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
 
       // Create user activity record (allow multiple participations)
       const campaignData = {
-        title: `${campaign.title} - กิจกรรมของ ${user.email}`,
+        title: `${campaign.title} - กิจกรรมของ ${userName}`,
         description: description,
         image_url: publicUrl,
         points: campaign.points,
@@ -104,6 +117,23 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
       }
 
       console.log('New campaign created:', newCampaign);
+
+      // Create point log entry manually
+      const { error: pointLogError } = await supabase
+        .from('user_point_logs')
+        .insert({
+          user_id: user.id,
+          campaign_id: newCampaign.id,
+          points: campaign.points,
+          activity_type: campaign.activity_type,
+          description: `คะแนนจากการเข้าร่วม: ${campaign.title}`,
+          action_type: 'earned'
+        });
+
+      if (pointLogError) {
+        console.error('Error creating point log:', pointLogError);
+        throw pointLogError; // Throw error to ensure consistency
+      }
 
       // Copy tags from original campaign to user's activity
       if (campaign.tags && campaign.tags.length > 0 && newCampaign) {

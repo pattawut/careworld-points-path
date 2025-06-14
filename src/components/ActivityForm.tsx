@@ -27,7 +27,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(activity?.image_url || null);
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const isEditing = !!activity;
 
@@ -134,6 +134,22 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           }
         }
       }
+
+      // Calculate points based on activity type
+      const pointsMap = {
+        'recycling': 5,
+        'energy_saving': 3,
+        'water_conservation': 3,
+        'transportation': 4,
+        'waste_reduction': 4,
+        'tree_planting': 6,
+        'community_cleanup': 5,
+        'education': 2,
+        'general': 1
+      };
+
+      const points = pointsMap[activityType as keyof typeof pointsMap] || 1;
+      const userName = profile?.full_name || 'ผู้ใช้';
       
       if (isEditing) {
         // Update existing campaign
@@ -161,16 +177,33 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           .insert([{
             user_id: user.id,
             activity_type: activityType,
+            title: `${activityType} - กิจกรรมของ ${userName}`,
             description,
             image_url: imageUrl,
-            points: 1,
-            status: 'archived',
-            title: activityType
+            points: points,
+            status: 'archived'
           }])
           .select('id')
           .single();
           
         if (error) throw error;
+
+        // Create point log entry manually
+        const { error: pointLogError } = await supabase
+          .from('user_point_logs')
+          .insert({
+            user_id: user.id,
+            campaign_id: newCampaign.id,
+            points: points,
+            activity_type: activityType,
+            description: `คะแนนจากการทำกิจกรรม: ${description}`,
+            action_type: 'earned'
+          });
+
+        if (pointLogError) {
+          console.error('Error creating point log:', pointLogError);
+          throw pointLogError;
+        }
 
         // Copy tags from the selected campaign type
         if (newCampaign) {
@@ -179,7 +212,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
         
         toast({
           title: "อัปโหลดกิจกรรมสำเร็จ",
-          description: "ขอบคุณที่ร่วมแบ่งปันกิจกรรมรักษ์โลก",
+          description: `ขอบคุณที่ร่วมแบ่งปันกิจกรรมรักษ์โลก คุณได้รับ ${points} คะแนน`,
         });
         
         // Reset form

@@ -17,6 +17,17 @@ export const useActivitySubmission = () => {
   const submitActivity = async (activityData: ActivityData, userId: string) => {
     setLoading(true);
     try {
+      // Get user profile for name
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      }
+
       // Calculate points based on activity type
       const pointsMap = {
         'recycling': 5,
@@ -31,6 +42,7 @@ export const useActivitySubmission = () => {
       };
 
       const points = pointsMap[activityData.activity_type as keyof typeof pointsMap] || 1;
+      const userName = userProfile?.full_name || 'ผู้ใช้';
 
       // Insert the campaign
       const { data: campaign, error: campaignError } = await supabase
@@ -38,18 +50,18 @@ export const useActivitySubmission = () => {
         .insert({
           user_id: userId,
           activity_type: activityData.activity_type,
-          title: activityData.activity_type,
+          title: `${activityData.activity_type} - กิจกรรมของ ${userName}`,
           description: activityData.description,
           image_url: activityData.image_url,
           points: points,
-          status: 'draft'
+          status: 'archived'
         })
         .select()
         .single();
 
       if (campaignError) throw campaignError;
 
-      // Create point log entry
+      // Create point log entry manually since we disabled the trigger
       const { error: pointLogError } = await supabase
         .from('user_point_logs')
         .insert({
@@ -63,8 +75,10 @@ export const useActivitySubmission = () => {
 
       if (pointLogError) {
         console.error('Error creating point log:', pointLogError);
-        // Don't throw error here, just log it
+        throw pointLogError; // Throw error to ensure consistency
       }
+
+      console.log('Activity and point log created successfully');
 
       toast({
         title: "บันทึกกิจกรรมสำเร็จ!",
