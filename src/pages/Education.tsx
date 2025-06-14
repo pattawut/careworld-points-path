@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RecycleIcon, Leaf, TreePine, Droplets, Youtube, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +28,8 @@ const Education = () => {
   const [articles, setArticles] = useState<EducationTag[]>([]);
   const [videos, setVideos] = useState<EducationTag[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedArticle, setSelectedArticle] = useState<EducationTag | null>(null);
+  const [articleModalOpen, setArticleModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,6 +66,22 @@ const Education = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ฟังก์ชันแปลงข้อความให้แสดงบรรทัดใหม่
+  const formatContent = (content: string) => {
+    return content.split('\n').map((line, index) => (
+      <span key={index}>
+        {line}
+        {index < content.split('\n').length - 1 && <br />}
+      </span>
+    ));
+  };
+
+  // ฟังก์ชันเปิดบทความแบบเต็ม
+  const handleArticleClick = (article: EducationTag) => {
+    setSelectedArticle(article);
+    setArticleModalOpen(true);
   };
 
   // ฟังก์ชันดึง YouTube Video ID จาก URL
@@ -157,7 +177,11 @@ const Education = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {articles.map((article) => (
-                    <Card key={article.id} className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                    <Card 
+                      key={article.id} 
+                      className="border-none shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                      onClick={() => handleArticleClick(article)}
+                    >
                       {article.image_url && (
                         <div className="aspect-video relative overflow-hidden rounded-t-lg">
                           <img 
@@ -179,9 +203,14 @@ const Education = () => {
                       <CardContent>
                         {article.content && (
                           <div className="prose prose-sm max-w-none">
-                            <p className="text-gray-700 line-clamp-4">{article.content}</p>
+                            <p className="text-gray-700 line-clamp-3">
+                              {formatContent(article.content.substring(0, 150) + '...')}
+                            </p>
                           </div>
                         )}
+                        <Button variant="outline" className="mt-4 w-full">
+                          อ่านเพิ่มเติม
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
@@ -313,6 +342,43 @@ const Education = () => {
         </section>
       </main>
       <Footer />
+
+      {/* Article Modal */}
+      <Dialog open={articleModalOpen} onOpenChange={setArticleModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-eco-blue flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: selectedArticle?.color + '20' }}>
+                <BookOpen className="h-4 w-4" style={{ color: selectedArticle?.color }} />
+              </div>
+              {selectedArticle?.name}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {selectedArticle?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-6">
+            {selectedArticle?.image_url && (
+              <div className="aspect-video relative overflow-hidden rounded-lg mb-6">
+                <img 
+                  src={selectedArticle.image_url}
+                  alt={selectedArticle.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            
+            {selectedArticle?.content && (
+              <div className="prose prose-lg max-w-none">
+                <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+                  {selectedArticle.content}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
