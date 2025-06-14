@@ -3,7 +3,7 @@
 CREATE TABLE public.user_point_logs (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  campaign_id UUID REFERENCES public.campaigns(id) ON DELETE CASCADE,
+  campaign_id UUID REFERENCES public.campaigns(id) ON DELETE SET NULL,
   points INTEGER NOT NULL,
   activity_type TEXT,
   description TEXT,
@@ -114,24 +114,6 @@ BEGIN
       'earned'
     );
     
-  -- เมื่อลบ campaign ที่มี user_id
-  ELSIF TG_OP = 'DELETE' AND OLD.user_id IS NOT NULL AND OLD.points > 0 THEN
-    INSERT INTO public.user_point_logs (
-      user_id, 
-      campaign_id, 
-      points, 
-      activity_type, 
-      description, 
-      action_type
-    ) VALUES (
-      OLD.user_id,
-      OLD.id,
-      OLD.points,
-      OLD.activity_type,
-      'หักคะแนนจากการลบกิจกรรม: ' || COALESCE(OLD.title, OLD.activity_type),
-      'deducted'
-    );
-    
   -- เมื่ออัพเดท campaign และเปลี่ยนคะแนน
   ELSIF TG_OP = 'UPDATE' AND NEW.user_id IS NOT NULL AND OLD.points != NEW.points THEN
     -- หักคะแนนเก่า
@@ -182,7 +164,7 @@ $$;
 
 -- สร้าง trigger ใหม่สำหรับจัดการคะแนนจาก campaigns
 CREATE TRIGGER handle_campaign_points_trigger
-  AFTER INSERT OR UPDATE OR DELETE ON public.campaigns
+  AFTER INSERT OR UPDATE ON public.campaigns
   FOR EACH ROW EXECUTE FUNCTION public.handle_campaign_points();
 
 -- อัพเดทคะแนนของ user ทั้งหมดใหม่จากข้อมูลที่มีอยู่

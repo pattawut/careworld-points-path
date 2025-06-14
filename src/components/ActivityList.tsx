@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,7 +68,7 @@ export const ActivityList = () => {
     try {
       setDeletingId(id);
       
-      // First, get the campaign to find the image path
+      // First, get the campaign to find the image path and points
       const { data: campaign, error: fetchError } = await supabase
         .from('campaigns')
         .select('*')
@@ -78,7 +77,26 @@ export const ActivityList = () => {
         
       if (fetchError) throw fetchError;
       
-      // Delete the campaign from the database (trigger จะจัดการ point logs อัตโนมัติ)
+      // สร้าง point log สำหรับการหักคะแนนก่อนลบ campaign
+      if (campaign.points > 0) {
+        const { error: pointLogError } = await supabase
+          .from('user_point_logs')
+          .insert({
+            user_id: user.id,
+            campaign_id: null, // ไม่อ้างอิงไปที่ campaign ที่จะถูกลบ
+            points: campaign.points,
+            activity_type: campaign.activity_type,
+            description: 'หักคะแนนจากการลบกิจกรรม: ' + (campaign.title || campaign.activity_type),
+            action_type: 'deducted'
+          });
+          
+        if (pointLogError) {
+          console.error('Error creating point log:', pointLogError);
+          // ไม่ throw error เพื่อให้การลบดำเนินต่อไปได้
+        }
+      }
+      
+      // Delete the campaign from the database
       const { error: deleteError } = await supabase
         .from('campaigns')
         .delete()
