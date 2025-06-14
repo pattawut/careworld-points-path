@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { RecycleIcon, ShoppingBag, Calendar, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 type Campaign = {
   id: string;
@@ -25,50 +25,116 @@ type Campaign = {
   type?: string;
   category?: string;
   path?: string;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
+};
+
+type CampaignTag = {
+  id: string;
+  name: string;
+  color: string;
 };
 
 const Campaigns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignTags, setCampaignTags] = useState<CampaignTag[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('status', ['active', 'promoted', 'coming_soon'])
-          .is('user_id', null)
-          .order('created_at', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        // Transform data to include required fields for display
-        const transformedCampaigns = (data || []).map(campaign => ({
-          ...campaign,
-          type: campaign.status === 'active' ? 'ongoing' : 
-                campaign.status === 'promoted' ? 'special' : 'upcoming',
-          category: campaign.activity_type || 'general',
-          path: `/campaigns/${campaign.id}`,
-          participants: Math.floor(Math.random() * 500) + 50 // Mock participant count
-        }));
-        
-        setCampaigns(transformedCampaigns);
-      } catch (error) {
-        console.error('Error fetching campaigns:', error);
-        // Fallback to sample data
-        setCampaigns(getSampleCampaigns());
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchCampaigns();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch campaign tags
+      const { data: tagsData, error: tagsError } = await supabase
+        .from('campaign_tags')
+        .select('*')
+        .order('name');
+      
+      if (tagsError) throw tagsError;
+      
+      setCampaignTags(tagsData || []);
+      
+      // Fetch campaigns
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .in('status', ['active', 'promoted', 'coming_soon'])
+        .is('user_id', null)
+        .order('created_at', { ascending: false });
+          
+      if (campaignsError) throw campaignsError;
+      
+      // Fetch tags for each campaign
+      const campaignsWithTags = await Promise.all(
+        (campaignsData || []).map(async (campaign) => {
+          const { data: tagData, error: tagError } = await supabase
+            .from('campaign_tag_relations')
+            .select(`
+              campaign_tags (
+                id,
+                name,
+                color
+              )
+            `)
+            .eq('campaign_id', campaign.id);
+
+          if (tagError) {
+            console.error('Error fetching tags for campaign:', campaign.id, tagError);
+            return {
+              ...campaign,
+              tags: [],
+              type: campaign.status === 'active' ? 'ongoing' : 
+                    campaign.status === 'promoted' ? 'special' : 'upcoming',
+              category: campaign.activity_type || 'general',
+              path: `/campaigns/${campaign.id}`,
+              participants: Math.floor(Math.random() * 500) + 50
+            };
+          }
+
+          const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+          return {
+            ...campaign,
+            tags,
+            type: campaign.status === 'active' ? 'ongoing' : 
+                  campaign.status === 'promoted' ? 'special' : 'upcoming',
+            category: campaign.activity_type || 'general',
+            path: `/campaigns/${campaign.id}`,
+            participants: Math.floor(Math.random() * 500) + 50
+          };
+        })
+      );
+      
+      setCampaigns(campaignsWithTags as Campaign[]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลได้"
+      });
+      
+      // Fallback to sample data
+      setCampaigns(getSampleCampaigns());
+      setCampaignTags([
+        { id: 'all', name: 'ทั้งหมด', color: '#6B7280' },
+        { id: 'bag', name: 'ถุงผ้า', color: '#10B981' },
+        { id: 'reuse', name: 'นำกลับมาใช้ซ้ำ', color: '#3B82F6' },
+        { id: 'recycle', name: 'รีไซเคิล', color: '#F59E0B' },
+        { id: 'reduce', name: 'ลดการใช้', color: '#EF4444' }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getSampleCampaigns = (): Campaign[] => [
     {
@@ -147,13 +213,16 @@ const Campaigns = () => {
     }
   ];
   
-  const filterCampaigns = (campaignsList: Campaign[], category?: string) => {
+  const filterCampaigns = (campaignsList: Campaign[], tagName?: string) => {
     let filtered = campaignsList;
     
-    if (category && category !== "all") {
+    if (tagName && tagName !== "all" && tagName !== "ทั้งหมด") {
       filtered = filtered.filter(campaign => {
-        const activityType = campaign.activity_type || campaign.category;
-        return activityType === category;
+        // Check if campaign has any tags that match the selected tag name
+        return campaign.tags?.some(tag => tag.name === tagName) ||
+               // Fallback to activity_type for backward compatibility
+               campaign.activity_type === tagName ||
+               campaign.category === tagName;
       });
     }
     
@@ -165,6 +234,12 @@ const Campaigns = () => {
     }
     
     return filtered;
+  };
+
+  // Helper function to get tag value for filtering
+  const getTagValue = (tag: CampaignTag) => {
+    if (tag.name === 'ทั้งหมด') return 'all';
+    return tag.name;
   };
 
   const getStatusText = (status: string) => {
@@ -235,6 +310,66 @@ const Campaigns = () => {
     }
   };
 
+  const renderCampaignCard = (campaign: Campaign) => (
+    <Card key={campaign.id} className="overflow-hidden border-none shadow-lg">
+      <div className="aspect-video relative">
+        <img 
+          src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
+          alt={campaign.title || 'Campaign'}
+          className="object-cover w-full h-full"
+        />
+        <div className="absolute top-3 right-3">
+          <Badge className={getBadgeColor(campaign.type || 'ongoing')}>
+            {getBadgeText(campaign.type || 'ongoing')}
+          </Badge>
+        </div>
+      </div>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          {getCategoryIcon(campaign.category || campaign.activity_type || 'general')}
+          <CardTitle className="text-lg text-eco-blue">{campaign.title || 'แคมเปญ'}</CardTitle>
+        </div>
+        <CardDescription className="line-clamp-2">
+          {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pb-2">
+        {/* Display campaign tags */}
+        {campaign.tags && campaign.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {campaign.tags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                style={{ 
+                  backgroundColor: tag.color + '20', 
+                  color: tag.color, 
+                  borderColor: tag.color 
+                }}
+                className="text-xs"
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+        
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            <span>ผู้เข้าร่วม {campaign.participants || 0} คน</span>
+          </div>
+          <span className="font-medium text-eco-blue">{campaign.points} แต้ม/ครั้ง</span>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button asChild className="w-full bg-eco-gradient hover:opacity-90">
+          <Link to={campaign.path || `/campaigns/${campaign.id}`}>เข้าร่วมแคมเปญ</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -280,100 +415,18 @@ const Campaigns = () => {
             
             <Tabs defaultValue="all" className="w-full mb-8">
               <TabsList className="bg-white/50 p-1">
-                <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
-                <TabsTrigger value="bag">ถุงผ้า</TabsTrigger>
-                <TabsTrigger value="reuse">นำกลับมาใช้ซ้ำ</TabsTrigger>
-                <TabsTrigger value="recycle">รีไซเคิล</TabsTrigger>
-                <TabsTrigger value="reduce">ลดการใช้</TabsTrigger>
+                {campaignTags.map((tag) => (
+                  <TabsTrigger key={tag.id} value={getTagValue(tag)}>
+                    {tag.name}
+                  </TabsTrigger>
+                ))}
               </TabsList>
               
-              <TabsContent value="all" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filterCampaigns(campaigns).map(campaign => (
-                    <Card key={campaign.id} className="overflow-hidden border-none shadow-lg">
-                      <div className="aspect-video relative">
-                        <img 
-                          src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
-                          alt={campaign.title || 'Campaign'}
-                          className="object-cover w-full h-full"
-                        />
-                        <div className="absolute top-3 right-3">
-                          <Badge className={getBadgeColor(campaign.type || 'ongoing')}>
-                            {getBadgeText(campaign.type || 'ongoing')}
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center gap-2">
-                          {getCategoryIcon(campaign.category || campaign.activity_type || 'general')}
-                          <CardTitle className="text-lg text-eco-blue">{campaign.title || 'แคมเปญ'}</CardTitle>
-                        </div>
-                        <CardDescription className="line-clamp-2">
-                          {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>ผู้เข้าร่วม {campaign.participants || 0} คน</span>
-                          </div>
-                          <span className="font-medium text-eco-blue">{campaign.points} แต้ม/ครั้ง</span>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button asChild className="w-full bg-eco-gradient hover:opacity-90">
-                          <Link to={campaign.path || `/campaigns/${campaign.id}`}>เข้าร่วมแคมเปญ</Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              {['bag', 'reuse', 'recycle', 'reduce'].map(category => (
-                <TabsContent key={category} value={category} className="mt-6">
+              {campaignTags.map((tag) => (
+                <TabsContent key={tag.id} value={getTagValue(tag)} className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filterCampaigns(campaigns, category).length > 0 ? (
-                      filterCampaigns(campaigns, category).map(campaign => (
-                        <Card key={campaign.id} className="overflow-hidden border-none shadow-lg">
-                          <div className="aspect-video relative">
-                            <img 
-                              src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
-                              alt={campaign.title || 'Campaign'}
-                              className="object-cover w-full h-full"
-                            />
-                            <div className="absolute top-3 right-3">
-                              <Badge className={getBadgeColor(campaign.type || 'ongoing')}>
-                                {getBadgeText(campaign.type || 'ongoing')}
-                              </Badge>
-                            </div>
-                          </div>
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center gap-2">
-                              {getCategoryIcon(campaign.category || campaign.activity_type || 'general')}
-                              <CardTitle className="text-lg text-eco-blue">{campaign.title || 'แคมเปญ'}</CardTitle>
-                            </div>
-                            <CardDescription className="line-clamp-2">
-                              {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent className="pb-2">
-                            <div className="flex items-center justify-between text-sm text-gray-500">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>ผู้เข้าร่วม {campaign.participants || 0} คน</span>
-                              </div>
-                              <span className="font-medium text-eco-blue">{campaign.points} แต้ม/ครั้ง</span>
-                            </div>
-                          </CardContent>
-                          <CardFooter>
-                            <Button asChild className="w-full bg-eco-gradient hover:opacity-90">
-                              <Link to={campaign.path || `/campaigns/${campaign.id}`}>เข้าร่วมแคมเปญ</Link>
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      ))
+                    {filterCampaigns(campaigns, tag.name).length > 0 ? (
+                      filterCampaigns(campaigns, tag.name).map(renderCampaignCard)
                     ) : (
                       <div className="col-span-full py-12 text-center">
                         <p className="text-gray-500">ไม่พบแคมเปญที่ตรงกับการค้นหา</p>
