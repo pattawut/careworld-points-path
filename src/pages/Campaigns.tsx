@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,10 +31,12 @@ interface Tag {
 }
 
 const Campaigns = () => {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
+  const [upcomingCampaigns, setUpcomingCampaigns] = useState<Campaign[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTag, setSelectedTag] = useState('ทั้งหมด');
-  const [loading, setLoading] = useState(true);
+  const [activeLoading, setActiveLoading] = useState(true);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
 
   const fetchTags = async () => {
     try {
@@ -51,11 +52,35 @@ const Campaigns = () => {
     }
   };
 
-  const fetchCampaigns = async () => {
-    try {
-      setLoading(true);
+  const fetchCampaignsWithTags = async (campaignsData: any[]) => {
+    return await Promise.all(
+      campaignsData.map(async (campaign) => {
+        const { data: tagData, error: tagError } = await supabase
+          .from('campaign_tag_relations')
+          .select(`
+            campaign_tags (
+              id,
+              name,
+              color
+            )
+          `)
+          .eq('campaign_id', campaign.id);
 
-      // Fetch all active campaigns
+        if (tagError) {
+          console.error('Error fetching tags for campaign:', campaign.id, tagError);
+          return { ...campaign, tags: [] };
+        }
+
+        const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+        return { ...campaign, tags };
+      })
+    );
+  };
+
+  const fetchActiveCampaigns = async () => {
+    try {
+      setActiveLoading(true);
+
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -64,48 +89,24 @@ const Campaigns = () => {
 
       if (campaignsError) throw campaignsError;
 
-      // Fetch campaigns with tags
-      const campaignsWithTags = await Promise.all(
-        (campaignsData || []).map(async (campaign) => {
-          const { data: tagData, error: tagError } = await supabase
-            .from('campaign_tag_relations')
-            .select(`
-              campaign_tags (
-                id,
-                name,
-                color
-              )
-            `)
-            .eq('campaign_id', campaign.id);
-
-          if (tagError) {
-            console.error('Error fetching tags for campaign:', campaign.id, tagError);
-            return { ...campaign, tags: [] };
-          }
-
-          const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
-          return { ...campaign, tags };
-        })
-      );
-
-      setCampaigns(campaignsWithTags);
+      const campaignsWithTags = await fetchCampaignsWithTags(campaignsData || []);
+      setActiveCampaigns(campaignsWithTags);
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
+      console.error('Error fetching active campaigns:', error);
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดข้อมูลแคมเปญได้"
+        description: "ไม่สามารถโหลดข้อมูลแคมเปญที่เปิดให้สมัครได้"
       });
     } finally {
-      setLoading(false);
+      setActiveLoading(false);
     }
   };
 
   const fetchUpcomingCampaigns = async () => {
     try {
-      setLoading(true);
+      setUpcomingLoading(true);
 
-      // Fetch campaigns with status 'coming_soon'
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -114,31 +115,8 @@ const Campaigns = () => {
 
       if (campaignsError) throw campaignsError;
 
-      // Fetch campaigns with tags
-      const campaignsWithTags = await Promise.all(
-        (campaignsData || []).map(async (campaign) => {
-          const { data: tagData, error: tagError } = await supabase
-            .from('campaign_tag_relations')
-            .select(`
-              campaign_tags (
-                id,
-                name,
-                color
-              )
-            `)
-            .eq('campaign_id', campaign.id);
-
-          if (tagError) {
-            console.error('Error fetching tags for campaign:', campaign.id, tagError);
-            return { ...campaign, tags: [] };
-          }
-
-          const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
-          return { ...campaign, tags };
-        })
-      );
-
-      setCampaigns(campaignsWithTags);
+      const campaignsWithTags = await fetchCampaignsWithTags(campaignsData || []);
+      setUpcomingCampaigns(campaignsWithTags);
     } catch (error) {
       console.error('Error fetching upcoming campaigns:', error);
       toast({
@@ -147,16 +125,22 @@ const Campaigns = () => {
         description: "ไม่สามารถโหลดข้อมูลแคมเปญที่กำลังจะมาถึงได้"
       });
     } finally {
-      setLoading(false);
+      setUpcomingLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTags();
-    fetchCampaigns();
+    fetchActiveCampaigns();
+    fetchUpcomingCampaigns();
   }, []);
 
-  const filteredCampaigns = campaigns.filter(campaign => {
+  const filteredActiveCampaigns = activeCampaigns.filter(campaign => {
+    if (selectedTag === 'ทั้งหมด') return true;
+    return campaign.tags?.some(tag => tag.name === selectedTag);
+  });
+
+  const filteredUpcomingCampaigns = upcomingCampaigns.filter(campaign => {
     if (selectedTag === 'ทั้งหมด') return true;
     return campaign.tags?.some(tag => tag.name === selectedTag);
   });
@@ -175,86 +159,95 @@ const Campaigns = () => {
             </p>
           </div>
 
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="active" onClick={() => fetchCampaigns()}>
-                กิจกรรมที่เปิดให้สมัคร
-              </TabsTrigger>
-              <TabsTrigger value="upcoming" onClick={() => fetchUpcomingCampaigns()}>
-                แคมเปญที่กำลังจะมาถึง
-              </TabsTrigger>
-            </TabsList>
+          {/* Tag filters */}
+          <div className="flex flex-wrap gap-2 mb-12 justify-center">
+            <Badge
+              variant={selectedTag === 'ทั้งหมด' ? 'default' : 'outline'}
+              className="cursor-pointer hover:bg-eco-teal hover:text-white transition-colors"
+              onClick={() => setSelectedTag('ทั้งหมด')}
+            >
+              ทั้งหมด
+            </Badge>
+            {tags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant={selectedTag === tag.name ? 'default' : 'outline'}
+                className="cursor-pointer hover:bg-eco-teal hover:text-white transition-colors"
+                style={{
+                  backgroundColor: selectedTag === tag.name ? tag.color : 'transparent',
+                  color: selectedTag === tag.name ? 'white' : tag.color,
+                  borderColor: tag.color
+                }}
+                onClick={() => setSelectedTag(tag.name)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
 
-            <TabsContent value="active">
-              {/* Tag filters */}
-              <div className="flex flex-wrap gap-2 mb-8 justify-center">
-                <Badge
-                  variant={selectedTag === 'ทั้งหมด' ? 'default' : 'outline'}
-                  className="cursor-pointer hover:bg-eco-teal hover:text-white transition-colors"
-                  onClick={() => setSelectedTag('ทั้งหมด')}
-                >
-                  ทั้งหมด
-                </Badge>
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant={selectedTag === tag.name ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-eco-teal hover:text-white transition-colors"
-                    style={{
-                      backgroundColor: selectedTag === tag.name ? tag.color : 'transparent',
-                      color: selectedTag === tag.name ? 'white' : tag.color,
-                      borderColor: tag.color
-                    }}
-                    onClick={() => setSelectedTag(tag.name)}
-                  >
-                    {tag.name}
-                  </Badge>
+          {/* Active Campaigns Section */}
+          <section className="mb-16">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-eco-blue mb-3">
+                กิจกรรมที่เปิดให้สมัคร
+              </h2>
+              <p className="text-gray-600">
+                กิจกรรมที่สามารถเข้าร่วมได้ในขณะนี้
+              </p>
+            </div>
+
+            {activeLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-eco-teal border-t-transparent"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredActiveCampaigns.map((campaign) => (
+                  <CampaignCard key={campaign.id} campaign={campaign} />
                 ))}
               </div>
+            )}
 
-              {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-eco-teal border-t-transparent"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredCampaigns.map((campaign) => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              )}
+            {!activeLoading && filteredActiveCampaigns.length === 0 && (
+              <Card className="border-none shadow-lg">
+                <CardContent className="py-12 text-center">
+                  <p className="text-gray-600 mb-4">ไม่พบแคมเปญที่เปิดให้สมัครในหมวดหมู่นี้</p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
 
-              {!loading && filteredCampaigns.length === 0 && (
-                <Card className="border-none shadow-lg">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-gray-600 mb-4">ไม่พบแคมเปญในหมวดหมู่นี้</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+          {/* Upcoming Campaigns Section */}
+          <section>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-eco-blue mb-3">
+                แคมเปญที่กำลังจะมาถึง
+              </h2>
+              <p className="text-gray-600">
+                กิจกรรมที่จะเปิดให้สมัครในอนาคตอันใกล้
+              </p>
+            </div>
 
-            <TabsContent value="upcoming">
-              {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-eco-teal border-t-transparent"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {campaigns.map((campaign) => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              )}
+            {upcomingLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-eco-teal border-t-transparent"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredUpcomingCampaigns.map((campaign) => (
+                  <CampaignCard key={campaign.id} campaign={campaign} />
+                ))}
+              </div>
+            )}
 
-              {!loading && campaigns.length === 0 && (
-                <Card className="border-none shadow-lg">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-gray-600 mb-4">ยังไม่มีแคมเปญที่กำลังจะมาถึง</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+            {!upcomingLoading && filteredUpcomingCampaigns.length === 0 && (
+              <Card className="border-none shadow-lg">
+                <CardContent className="py-12 text-center">
+                  <p className="text-gray-600 mb-4">ยังไม่มีแคมเปญที่กำลังจะมาถึงในหมวดหมู่นี้</p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
         </div>
       </main>
       <Footer />
