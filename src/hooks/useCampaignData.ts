@@ -75,15 +75,16 @@ export const useCampaignData = (id: string | undefined, userId: string | undefin
   };
 
   const checkUserParticipation = async () => {
-    if (!userId || !id) return;
+    if (!userId || !id || !campaign) return;
 
     try {
+      // Count how many times user has participated in this campaign
       const { data, error } = await supabase
         .from('campaigns')
         .select('id')
         .eq('user_id', userId)
-        .eq('title', campaign?.title)
-        .limit(1);
+        .ilike('title', `${campaign.title}%`)
+        .eq('status', 'completed');
 
       if (error) throw error;
 
