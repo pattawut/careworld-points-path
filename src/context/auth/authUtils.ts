@@ -48,6 +48,25 @@ export const createAdminRole = async (userId: string): Promise<boolean> => {
   }
 };
 
+export const updateProfileEmail = async (userId: string, email: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ email })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error updating profile email:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating profile email:', error);
+    return false;
+  }
+};
+
 export const handleSignOut = async (navigate: Function): Promise<void> => {
   try {
     console.log("Signing out user");

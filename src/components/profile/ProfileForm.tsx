@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { updateProfileEmail } from '@/context/auth/authUtils';
 
 // Schema for profile form
 const profileFormSchema = z.object({
@@ -56,6 +57,7 @@ export function ProfileForm({ userId, initialFullName, initialEmail, onPasswordD
         .from('profiles')
         .update({
           full_name: values.full_name,
+          email: values.email,
         })
         .eq('id', userId);
       
