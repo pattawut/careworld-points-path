@@ -36,6 +36,7 @@ export const LoginForm = () => {
           title: "เข้าสู่ระบบสำเร็จ",
           description: "ยินดีต้อนรับกลับมา!",
         });
+        // Always redirect to dashboard, let user navigate to admin if they have permissions
         navigate('/dashboard');
       }
     } catch (error) {

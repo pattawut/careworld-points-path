@@ -14,7 +14,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to dashboard
+    // If already logged in, redirect to dashboard (not admin)
     if (user) {
       navigate('/dashboard');
     }

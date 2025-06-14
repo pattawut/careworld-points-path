@@ -1,108 +1,102 @@
 
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar, Award } from 'lucide-react';
 
-type Campaign = {
+interface Campaign {
   id: string;
-  title: string | null;
-  description: string | null;
-  image_url: string | null;
+  title: string;
+  description: string;
+  image_url: string;
   points: number;
   status: string;
+  start_date: string | null;
+  end_date: string | null;
   tags?: Array<{
     id: string;
     name: string;
     color: string;
   }>;
-};
+}
 
 interface CampaignCardProps {
   campaign: Campaign;
 }
 
-export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign }) => {
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'กำลังดำเนินการ';
-      case 'promoted':
-        return 'โปรโมตแล้ว';
-      case 'coming_soon':
-        return 'เร็วๆ นี้';
-      case 'completed':
-        return 'สิ้นสุดแล้ว';
-      default:
-        return 'กำลังจะมาถึง';
-    }
-  };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'default';
-      case 'promoted':
-        return 'destructive';
-      case 'coming_soon':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
+export const CampaignCard = ({ campaign }: CampaignCardProps) => {
+  const getStatusBadge = (status: string) => {
+    const statusMap = {
+      active: { label: 'เปิดใช้งาน', variant: 'default' as const },
+      coming_soon: { label: 'เร็วๆ นี้', variant: 'outline' as const },
+      promoted: { label: 'โปรโมต', variant: 'destructive' as const }
+    };
+    
+    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.active;
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
-      <div className="aspect-video relative">
+    <Card className="group hover:shadow-lg transition-shadow border-none shadow-md overflow-hidden">
+      <div className="relative aspect-video">
         <img 
-          src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
-          alt={campaign.title || 'Campaign'}
-          className="object-cover w-full h-full"
+          src={campaign.image_url || "https://placehold.co/400x200/e5f7f0/2c7873?text=Campaign+Image"}
+          alt={campaign.title}
+          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute top-3 right-3">
-          <Badge variant={getStatusVariant(campaign.status) as any}>
-            {getStatusText(campaign.status)}
-          </Badge>
+          {getStatusBadge(campaign.status)}
         </div>
-        {campaign.status === 'promoted' && (
-          <div className="absolute top-3 left-3">
-            <Badge className="bg-red-500 text-white">โปรโมต</Badge>
-          </div>
-        )}
       </div>
-      <div className="p-6">
-        <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title || 'แคมเปญ'}</h3>
-        <p className="text-gray-600 mb-4">
-          {campaign.description || "ร่วมแคมเปญรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+      
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap gap-1 mb-2">
+          {campaign.tags?.map((tag) => (
+            <Badge
+              key={tag.id}
+              variant="outline"
+              style={{ 
+                backgroundColor: tag.color + '20', 
+                color: tag.color, 
+                borderColor: tag.color 
+              }}
+              className="text-xs"
+            >
+              {tag.name}
+            </Badge>
+          ))}
+        </div>
+        <h3 className="text-lg font-semibold text-eco-blue group-hover:text-eco-teal transition-colors">
+          {campaign.title}
+        </h3>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <p className="text-gray-600 text-sm line-clamp-2">
+          {campaign.description}
         </p>
         
-        {campaign.tags && campaign.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {campaign.tags.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                style={{ 
-                  backgroundColor: tag.color + '20', 
-                  color: tag.color, 
-                  borderColor: tag.color 
-                }}
-                className="text-xs"
-              >
-                {tag.name}
-              </Badge>
-            ))}
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-1 text-eco-teal">
+            <Award className="h-4 w-4" />
+            <span className="font-medium">{campaign.points} แต้ม</span>
           </div>
-        )}
-        
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">คะแนน: {campaign.points} แต้ม/ครั้ง</span>
-          <Button asChild className="bg-eco-gradient hover:opacity-90">
-            <Link to={`/campaigns/${campaign.id}`}>เข้าร่วม</Link>
-          </Button>
+          
+          {campaign.start_date && (
+            <div className="flex items-center gap-1 text-gray-500">
+              <Calendar className="h-4 w-4" />
+              <span>{new Date(campaign.start_date).toLocaleDateString('th-TH')}</span>
+            </div>
+          )}
         </div>
-      </div>
+        
+        <Button asChild className="w-full bg-eco-gradient hover:opacity-90">
+          <Link to={`/campaigns/${campaign.id}`}>
+            {campaign.status === 'coming_soon' ? 'ดูรายละเอียด' : 'เข้าร่วมกิจกรรม'}
+          </Link>
+        </Button>
+      </CardContent>
     </Card>
   );
 };
