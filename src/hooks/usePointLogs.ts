@@ -35,10 +35,16 @@ export const usePointLogs = () => {
         
       if (logsError) throw logsError;
       
-      setPointLogs(logs || []);
+      // Cast the data to proper types
+      const typedLogs = (logs || []).map(log => ({
+        ...log,
+        action_type: log.action_type as 'earned' | 'deducted'
+      })) as PointLog[];
+      
+      setPointLogs(typedLogs);
       
       // คำนวณคะแนนรวม
-      const total = (logs || []).reduce((sum, log) => {
+      const total = typedLogs.reduce((sum, log) => {
         return sum + (log.action_type === 'earned' ? log.points : -log.points);
       }, 0);
       
