@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ActivityImageUpload } from '@/components/activity/ActivityImageUpload';
-import { ActivityGallery } from '@/components/ActivityGallery';
+import { CampaignActivityGallery } from '@/components/activity/CampaignActivityGallery';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -413,11 +412,14 @@ const CampaignDetail = () => {
                 <CardHeader>
                   <CardTitle className="text-2xl text-eco-blue">แกลเลอรี่กิจกรรม</CardTitle>
                   <CardDescription>
-                    ชมกิจกรรมที่ผู้ใช้อื่นๆ ได้เข้าร่วมแล้ว
+                    ชมกิจกรรมที่ผู้ใช้อื่นๆ ได้เข้าร่วมแคมเปญนี้แล้ว
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ActivityGallery showCaption={true} showUserActivities={true} />
+                  <CampaignActivityGallery 
+                    campaignTitle={campaign.title || ''} 
+                    showCaption={true} 
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
