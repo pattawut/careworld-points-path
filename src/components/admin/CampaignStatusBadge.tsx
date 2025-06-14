@@ -19,7 +19,7 @@ export const CampaignStatusBadge = ({ status }: CampaignStatusBadgeProps) => {
     return (
       <Badge 
         variant={statusInfo.variant} 
-        className={statusInfo.className}
+        className={'className' in statusInfo ? statusInfo.className : undefined}
       >
         {statusInfo.label}
       </Badge>
