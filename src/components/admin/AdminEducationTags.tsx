@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit, Trash2, BookOpen, Youtube } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Youtube, Upload, X } from 'lucide-react';
 
 interface EducationTag {
   id: string;
@@ -17,7 +17,8 @@ interface EducationTag {
   type: 'article' | 'video';
   color: string;
   content?: string;
-  video_id?: string;
+  youtube_url?: string;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,8 +34,10 @@ export const AdminEducationTags = () => {
     type: 'article' as 'article' | 'video',
     color: '#10B981',
     content: '',
-    video_id: ''
+    youtube_url: '',
+    image_url: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { toast } = useToast();
 
   // Mock data สำหรับตัวอย่าง
@@ -46,6 +49,7 @@ export const AdminEducationTags = () => {
       type: 'article',
       color: '#10B981',
       content: 'เนื้อหาเกี่ยวกับการแยกขยะ...',
+      image_url: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=400&q=80',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -55,7 +59,7 @@ export const AdminEducationTags = () => {
       description: 'วิธีการลดการใช้พลาสติกในชีวิตประจำวัน',
       type: 'video',
       color: '#3B82F6',
-      video_id: 'dQw4w9WgXcQ',
+      youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -66,6 +70,7 @@ export const AdminEducationTags = () => {
       type: 'article',
       color: '#F59E0B',
       content: 'เนื้อหาเกี่ยวกับการรีไซเคิล...',
+      image_url: 'https://images.unsplash.com/photo-1573167243872-43c6433b9d40?auto=format&fit=crop&w=400&q=80',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -75,6 +80,46 @@ export const AdminEducationTags = () => {
     // ใช้ mock data แทนการเรียก API จริง
     setTags(mockTags);
   }, []);
+
+  // ฟังก์ชันดึง YouTube Video ID จาก URL
+  const getYouTubeVideoId = (url: string) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  // ฟังก์ชันสำหรับสร้าง YouTube thumbnail URL
+  const getYouTubeThumbnail = (url: string) => {
+    const videoId = getYouTubeVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+  };
+
+  // ฟังก์ชันจำลองการอัปโหลดรูป
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      // จำลองการอัปโหลด - ในความเป็นจริงควรอัปโหลดไปยัง Supabase Storage
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // สร้าง URL ชั่วคราวสำหรับรูปที่อัปโหลด
+      const imageUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
+      
+      toast({
+        title: "สำเร็จ!",
+        description: "อัปโหลดรูปภาพเรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถอัปโหลดรูปภาพได้"
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +133,15 @@ export const AdminEducationTags = () => {
       return;
     }
 
+    if (formData.type === 'video' && !formData.youtube_url.trim()) {
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "กรุณาใส่ลิงก์ YouTube"
+      });
+      return;
+    }
+
     try {
       const newTag: EducationTag = {
         id: editingTag?.id || Date.now().toString(),
@@ -96,7 +150,8 @@ export const AdminEducationTags = () => {
         type: formData.type,
         color: formData.color,
         content: formData.type === 'article' ? formData.content : undefined,
-        video_id: formData.type === 'video' ? formData.video_id : undefined,
+        youtube_url: formData.type === 'video' ? formData.youtube_url : undefined,
+        image_url: formData.image_url || undefined,
         created_at: editingTag?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -117,7 +172,7 @@ export const AdminEducationTags = () => {
 
       setDialogOpen(false);
       setEditingTag(null);
-      setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', video_id: '' });
+      setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', youtube_url: '', image_url: '' });
     } catch (error) {
       console.error('Error saving education tag:', error);
       toast({
@@ -136,7 +191,8 @@ export const AdminEducationTags = () => {
       type: tag.type,
       color: tag.color || '#10B981',
       content: tag.content || '',
-      video_id: tag.video_id || ''
+      youtube_url: tag.youtube_url || '',
+      image_url: tag.image_url || ''
     });
     setDialogOpen(true);
   };
@@ -164,7 +220,7 @@ export const AdminEducationTags = () => {
 
   const handleCreate = () => {
     setEditingTag(null);
-    setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', video_id: '' });
+    setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', youtube_url: '', image_url: '' });
     setDialogOpen(true);
   };
 
@@ -185,6 +241,22 @@ export const AdminEducationTags = () => {
         {tags.map((tag) => (
           <Card key={tag.id} className="border-none shadow-md">
             <CardHeader className="pb-3">
+              {/* รูปภาพพรีวิว */}
+              {(tag.image_url || (tag.youtube_url && getYouTubeThumbnail(tag.youtube_url))) && (
+                <div className="aspect-video relative overflow-hidden rounded-lg mb-3">
+                  <img 
+                    src={tag.type === 'video' && tag.youtube_url ? getYouTubeThumbnail(tag.youtube_url)! : tag.image_url!}
+                    alt={tag.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {tag.type === 'video' && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <Youtube className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 rounded-full bg-eco-teal/10 flex items-center justify-center">
@@ -231,10 +303,12 @@ export const AdminEducationTags = () => {
                   </div>
                 </div>
 
-                {tag.type === 'video' && tag.video_id && (
+                {tag.type === 'video' && tag.youtube_url && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Video ID:</span>
-                    <span className="font-medium text-xs">{tag.video_id}</span>
+                    <span className="text-gray-600">YouTube:</span>
+                    <span className="font-medium text-xs truncate max-w-[100px]">
+                      {getYouTubeVideoId(tag.youtube_url)}
+                    </span>
                   </div>
                 )}
                 
@@ -344,27 +418,93 @@ export const AdminEducationTags = () => {
             </div>
 
             {formData.type === 'article' && (
-              <div className="space-y-2">
-                <Label htmlFor="content">เนื้อหา</Label>
-                <Textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="เนื้อหาของบทความ..."
-                  rows={6}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="article-image">รูปภาพประกอบบทความ</Label>
+                  <div className="space-y-3">
+                    {formData.image_url && (
+                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
+                        <img 
+                          src={formData.image_url} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2 bg-white/80"
+                          onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        disabled={uploadingImage}
+                        className="flex-1"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingImage ? 'กำลังอัปโหลด...' : 'อัปโหลดรูปภาพ'}
+                      </Button>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(file);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="content">เนื้อหา</Label>
+                  <Textarea
+                    id="content"
+                    value={formData.content}
+                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="เนื้อหาของบทความ..."
+                    rows={6}
+                  />
+                </div>
+              </>
             )}
 
             {formData.type === 'video' && (
-              <div className="space-y-2">
-                <Label htmlFor="video_id">YouTube Video ID</Label>
-                <Input
-                  id="video_id"
-                  value={formData.video_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, video_id: e.target.value }))}
-                  placeholder="เช่น dQw4w9WgXcQ"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="youtube_url">ลิงก์ YouTube</Label>
+                  <Input
+                    id="youtube_url"
+                    value={formData.youtube_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, youtube_url: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    type="url"
+                  />
+                </div>
+                
+                {formData.youtube_url && getYouTubeThumbnail(formData.youtube_url) && (
+                  <div className="space-y-2">
+                    <Label>พรีวิววิดีโอ</Label>
+                    <div className="aspect-video rounded-lg overflow-hidden border">
+                      <img 
+                        src={getYouTubeThumbnail(formData.youtube_url)!}
+                        alt="YouTube Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
