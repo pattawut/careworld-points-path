@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,14 +31,15 @@ export const Campaigns = () => {
       try {
         setLoading(true);
         
-        // Fetch campaigns
+        // Fetch campaigns - prioritize promoted campaigns, then active ones
         const { data: campaignsData, error } = await supabase
           .from('campaigns')
           .select('*')
-          .in('status', ['active', 'promoted', 'coming_soon'])
+          .in('status', ['promoted', 'active'])
           .is('user_id', null)
-          .limit(4)
-          .order('created_at', { ascending: false });
+          .order('status', { ascending: false }) // 'promoted' comes before 'active'
+          .order('created_at', { ascending: false })
+          .limit(4);
           
         if (error) {
           throw error;
@@ -182,6 +184,12 @@ export const Campaigns = () => {
                     {getStatusText(campaign.status)}
                   </Badge>
                 </div>
+                {/* แสดงป้าย "โปรโมต" สำหรับแคมเปญที่ได้รับการโปรโมต */}
+                {campaign.status === 'promoted' && (
+                  <div className="absolute top-3 left-3">
+                    <Badge className="bg-red-500 text-white">โปรโมต</Badge>
+                  </div>
+                )}
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title || 'แคมเปญ'}</h3>

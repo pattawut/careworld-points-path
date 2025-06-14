@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,7 @@ const Campaigns = () => {
       
       setCampaignTags(tagsData || []);
       
-      // Fetch active campaigns
+      // Fetch active campaigns (active and promoted status)
       const { data: activeCampaignsData, error: activeCampaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -75,7 +74,7 @@ const Campaigns = () => {
           
       if (activeCampaignsError) throw activeCampaignsError;
       
-      // Fetch upcoming campaigns
+      // Fetch upcoming campaigns (coming_soon status)
       const { data: upcomingCampaignsData, error: upcomingCampaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -517,25 +516,21 @@ const Campaigns = () => {
               ))}
             </Tabs>
             
-            {/* Upcoming Campaigns Section */}
-            <div className="mt-16">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-eco-blue mb-2">แคมเปญที่กำลังจะมาถึง</h2>
-                  <p className="text-gray-600">เตรียมตัวให้พร้อมสำหรับแคมเปญพิเศษที่กำลังจะมาถึง</p>
+            {/* Upcoming Campaigns Section - แสดงเฉพาะเมื่อมีข้อมูล */}
+            {upcomingCampaigns.length > 0 && (
+              <div className="mt-16">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-eco-blue mb-2">แคมเปญที่กำลังจะมาถึง</h2>
+                    <p className="text-gray-600">เตรียมตัวให้พร้อมสำหรับแคมเปญพิเศษที่กำลังจะมาถึง</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {upcomingCampaigns.map(renderUpcomingCampaignCard)}
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {upcomingCampaigns.length > 0 ? (
-                  upcomingCampaigns.map(renderUpcomingCampaignCard)
-                ) : (
-                  <div className="col-span-full py-12 text-center">
-                    <p className="text-gray-500">ยังไม่มีแคมเปญที่กำลังจะมาถึง</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </section>
       </main>

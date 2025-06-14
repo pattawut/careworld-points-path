@@ -1,640 +1,428 @@
+
 import { useState, useEffect } from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { useParams, Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { RecycleIcon, ShoppingBag, ImageIcon, Award, Calendar, Users, Leaf } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { ActivityImageUpload } from '@/components/activity/ActivityImageUpload';
+import { ActivityGallery } from '@/components/ActivityGallery';
+import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar, MapPin, Users, Target, Award } from 'lucide-react';
 
-const campaignsData = {
-  "bag": {
-    id: 1,
-    title: "ถุงผ้ารักษ์โลก",
-    description: "รณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน เพื่อลดปริมาณขยะพลาสติกที่ทำลายสิ่งแวดล้อม",
-    longDescription: `การใช้ถุงพลาสติกแบบใช้ครั้งเดียวทิ้งเป็นหนึ่งในปัญหาสิ่งแวดล้อมที่ใหญ่ที่สุด ถุงพลาสติกใช้เวลาย่อยสลายหลายร้อยปี และส่วนใหญ่มักลงเอยในมหาสมุทร ส่งผลกระทบต่อสิ่งมีชีวิตในทะเล 
-
-แคมเปญนี้ส่งเสริมให้ทุกคนหันมาใช้ถุงผ้าที่สามารถใช้ซ้ำได้หลายครั้ง ลดการสร้างขยะพลาสติก และช่วยลดผลกระทบต่อสิ่งแวดล้อม`,
-    rules: [
-      "ใช้ถุงผ้าในการซื้อสินค้าแทนถุงพลาสติก",
-      "ถ่ายรูปการใช้ถุงผ้าในสถานการณ์จริง",
-      "อธิบายสั้นๆ ว่าคุณใช้ถุงผ้าในสถานการณ์ใด",
-      "เมื่อใช้ถุงผ้าอย่างต่อเนื่อง 5 ครั้งจะได้รับโบนัสพิเศษ +2 แต้ม"
-    ],
-    points: 1,
-    bonusPoints: "+2 เมื่อใช้ต่อเนื่อง 5 ครั้ง",
-    type: "ongoing",
-    category: "reduce",
-    icon: ShoppingBag,
-    image: "https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=1000&q=80",
-    coverImage: "https://images.unsplash.com/photo-1610024062303-58e9c0b43c8f?auto=format&fit=crop&w=1200&q=80",
-    participants: 320,
-    endDate: null,
-    gallery: [
-      {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1598532213504-961f22143e3c?auto=format&fit=crop&w=600&q=80",
-        user: "สมหญิง รักโลก",
-        date: "2 วันก่อน",
-        caption: "ใช้ถุงผ้าไปซื้อผักที่ตลาดนัด ช่วยลดการใช้ถุงพลาสติกได้หลายใบเลย!"
-      },
-      {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1591824438708-ce405f36ba3d?auto=format&fit=crop&w=600&q=80",
-        user: "สมชาย ใจดี",
-        date: "3 วันก่อน",
-        caption: "พกถุงผ้าไปซื้อของที่ซูเปอร์มาร์เก็ต สะดวกและช่วยลดขยะได้มาก"
-      },
-      {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1621609764095-b32bbe35cf3a?auto=format&fit=crop&w=600&q=80",
-        user: "ภาสกร นิยมไทย",
-        date: "1 สัปดาห์ก่อน",
-        caption: "ใช้ถุงผ้าแทนถุงพลาสติกทุกครั้งที่ไปจ่ายตลาด ทำจนเป็นนิสัยแล้วค่ะ"
-      }
-    ]
-  },
-  "reuse": {
-    id: 2,
-    title: "แก้วและหลอดรียูส",
-    description: "ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ ลดการสร้างขยะพลาสติกแบบใช้ครั้งเดียว",
-    longDescription: `แก้วพลาสติกและหลอดพลาสติกแบบใช้ครั้งเดียวเป็นหนึ่งในขยะที่พบมากที่สุดในทะเลและชายหาด พวกมันส่งผลกระทบอย่างมากต่อสิ่งมีชีวิตในทะเล
-
-แคมเปญนี้ส่งเสริมให้ทุกคนใช้แก้วและหลอดแบบพกพาที่สามารถใช้ซ้ำได้ เพื่อลดการสร้างขยะพลาสติกในชีวิตประจำวัน และช่วยลดปริมาณขยะที่จะลงสู่มหาสมุทร`,
-    rules: [
-      "ใช้แก้วส่วนตัวหรือแก้วที่นำกลับมาใช้ใหม่ได้",
-      "หากใช้หลอด ให้ใช้หลอดที่นำกลับมาใช้ใหม่ได้ เช่น หลอดโลหะ หลอดซิลิโคน",
-      "ถ่ายรูปการใช้แก้วหรือหลอดส่วนตัวในสถานการณ์จริง",
-      "อธิบายสั้นๆ ว่าคุณใช้แก้วหรือหลอดรียูสในสถานการณ์ใด",
-      "เมื่อใช้แก้วส่วนตัวอย่างต่อเนื่อง 7 ครั้งจะได้รับโบนัสพิเศษ +3 แต้ม"
-    ],
-    points: 1,
-    bonusPoints: "+3 เมื่อใช้ต่อเนื่อง 7 ครั้ง",
-    type: "ongoing",
-    category: "reuse",
-    icon: RecycleIcon,
-    image: "https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=1000&q=80",
-    coverImage: "https://images.unsplash.com/photo-1589365278144-c9e705f843ba?auto=format&fit=crop&w=1200&q=80",
-    participants: 285,
-    endDate: null,
-    gallery: [
-      {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1576426863848-c21f53c60b19?auto=format&fit=crop&w=600&q=80",
-        user: "ธนาพร ดาวเด่น",
-        date: "วันนี้",
-        caption: "แก้วสแตนเลสคู่ใจ ไปไหนมาไหนพกติดกระเป๋าตลอด ช่วยโลกได้ทุกวัน!"
-      },
-      {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1581541704900-33b4359c1583?auto=format&fit=crop&w=600&q=80",
-        user: "กิตติภพ วิเศษ",
-        date: "2 วันก่อน",
-        caption: "หลอดโลหะสวยๆ กับเครื่องดื่มเย็นๆ ช่วยลดขยะพลาสติกได้อีกชิ้น"
-      },
-      {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1621609764095-b32bbe35cf3a?auto=format&fit=crop&w=600&q=80",
-        user: "สมชาย ใจดี",
-        date: "4 วันก่อน",
-        caption: "แก้วเซรามิคส์วนตัว นำมาใช้ที่ออฟฟิศทุกวัน ลดขยะได้เยอะมาก"
-      }
-    ]
-  },
-  "recycle": {
-    id: 3,
-    title: "คัดแยกขยะ",
-    description: "สนับสนุนให้นำขยะจากบ้านมาร่วมโครงการ เพื่อปลูกจิตสำนึกในการคัดแยกขยะตั้งแต่ต้นทาง",
-    longDescription: `การคัดแยกขยะที่ต้นทางเป็นสิ่งสำคัญในการจัดการขยะอย่างยั่งยืน เมื่อเราคัดแยกขยะตั้งแต่ต้นทาง จะทำให้ขยะที่สามารถนำไปรีไซเคิลได้ถูกส่งไปแปรรูปให้เกิดประโยชน์ ลดปริมาณขยะที่ต้องนำไปฝังกลบหรือเผาทำลาย
-
-แคมเปญนี้ส่งเสริมให้ทุกคนคัดแยกขยะในครัวเรือนอย่างถูกวิธี เพื่อให้การจัดการขยะมีประสิทธิภาพมากขึ้น และช่วยลดผลกระทบต่อสิ่งแวดล้อม`,
-    rules: [
-      "คัดแยกขยะในบ้านตามประเภท (ขยะรีไซเคิล ขยะอินทรีย์ ขยะทั่วไป ขยะอันตราย)",
-      "ถ่ายรูปขยะที่คัดแยกแล้ว พร้อมระบุประเภท",
-      "อธิบายสั้นๆ ว่าคุณคัดแยกขยะอะไร และจะนำไปจัดการอย่างไรต่อ",
-      "การคัดแยกขยะอันตรายอย่างถูกต้องจะได้รับโบนัสเพิ่ม +1 แต้ม"
-    ],
-    points: 1,
-    bonusPoints: "+1 สำหรับการคัดแยกขยะอันตรายอย่างถูกต้อง",
-    type: "ongoing",
-    category: "recycle",
-    icon: Leaf,
-    image: "https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=1000&q=80",
-    coverImage: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1200&q=80",
-    participants: 420,
-    endDate: null,
-    gallery: [
-      {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80",
-        user: "มนัสนันท์ พัฒนา",
-        date: "เมื่อวาน",
-        caption: "คัดแยกขยะรีไซเคิลประจำสัปดาห์ แยกพลาสติก กระดาษ และโลหะออกจากกัน เพื่อนำไปรีไซเคิลต่อ"
-      },
-      {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1604187350603-21be3cc7a5dc?auto=format&fit=crop&w=600&q=80",
-        user: "สุชาดา เรืองเดช",
-        date: "3 วันก่อน",
-        caption: "แยกขวดพลาสติกและกระป๋องอลูมิเนียมก่อนนำไปขาย ช่วยเพิ่มมูลค่าและลดขยะฝังกลบ"
-      },
-      {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1611284446314-60a58ac0dade?auto=format&fit=crop&w=600&q=80",
-        user: "ภาสกร นิยมไทย",
-        date: "1 สัปดาห์ก่อน",
-        caption: "ถังขยะแยกประเภทที่บ้าน ทำให้การคัดแยกขยะเป็นเรื่องง่าย"
-      }
-    ]
-  }
+type Campaign = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+  points: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  activity_type: string | null;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
 };
 
 const CampaignDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [caption, setCaption] = useState('');
-  const [activeTab, setActiveTab] = useState('about');
-  const { toast } = useToast();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   
-  // Fallback if slug doesn't exist
-  const campaign = slug && campaignsData[slug as keyof typeof campaignsData]
-    ? campaignsData[slug as keyof typeof campaignsData]
-    : campaignsData.bag; // Default to bag campaign
-  
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
+  const [userHasParticipated, setUserHasParticipated] = useState(false);
+
   useEffect(() => {
-    if (slug) {
-      fetchRecentActivities();
+    if (id) {
+      fetchCampaign();
+      if (user) {
+        checkUserParticipation();
+      }
     }
-  }, [slug]);
+  }, [id, user]);
 
-  const fetchRecentActivities = async () => {
+  const fetchCampaign = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       
-      // Fetch user activities related to this campaign type from campaigns table
-      const { data: activitiesData, error: activitiesError } = await supabase
+      const { data: campaignData, error: campaignError } = await supabase
         .from('campaigns')
-        .select('*, user:user_id(full_name, avatar_url)')
-        .eq('activity_type', slug)
-        .not('user_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(6);
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      if (activitiesError) {
-        throw activitiesError;
+      if (campaignError) throw campaignError;
+
+      // Fetch tags for the campaign
+      const { data: tagData, error: tagError } = await supabase
+        .from('campaign_tag_relations')
+        .select(`
+          campaign_tags (
+            id,
+            name,
+            color
+          )
+        `)
+        .eq('campaign_id', id);
+
+      if (tagError) {
+        console.error('Error fetching tags:', tagError);
       }
 
-      setRecentActivities(activitiesData || []);
+      const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+      
+      setCampaign({
+        ...campaignData,
+        tags
+      });
     } catch (error) {
-      console.error('Error fetching activities:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleSubmit = async () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "กรุณาเข้าสู่ระบบ",
-        description: "คุณต้องเข้าสู่ระบบก่อนร่วมกิจกรรม",
-      });
-      return;
-    }
-    
-    if (!preview) {
-      toast({
-        variant: "destructive",
-        title: "กรุณาอัพโหลดรูปภาพ",
-        description: "คุณต้องแนบรูปภาพเพื่อร่วมกิจกรรม",
-      });
-      return;
-    }
-    
-    if (caption.length < 10) {
-      toast({
-        variant: "destructive",
-        title: "กรุณาเพิ่มคำอธิบาย",
-        description: "คำอธิบายควรมีความยาวอย่างน้อย 10 ตัวอักษร",
-      });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      
-      // Convert base64 to file
-      const base64Data = preview.split(',')[1];
-      const byteCharacters = atob(base64Data);
-      const byteArrays = [];
-      
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteArrays.push(byteCharacters.charCodeAt(i));
-      }
-      
-      const byteArray = new Uint8Array(byteArrays);
-      const blob = new Blob([byteArray], { type: 'image/jpeg' });
-      const file = new File([blob], `campaign-${slug}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      
-      // Upload image to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('activity-images')
-        .upload(filePath, file);
-      
-      if (uploadError) {
-        throw uploadError;
-      }
-      
-      // Get public URL for the uploaded image
-      const { data: publicUrlData } = supabase.storage
-        .from('activity-images')
-        .getPublicUrl(filePath);
-        
-      const imageUrl = publicUrlData.publicUrl;
-      
-      // Add activity to campaigns table instead of activities table
-      const { error: activityError } = await supabase
-        .from('campaigns')
-        .insert([{
-          user_id: user.id,
-          activity_type: slug || 'recycle',
-          description: caption,
-          image_url: imageUrl,
-          points: campaign.points || 1,
-          status: 'archived', // User activities are archived by default
-        }]);
-        
-      if (activityError) {
-        throw activityError;
-      }
-      
-      // Fetch updated recent activities
-      fetchRecentActivities();
-      
-      toast({
-        title: "อัพโหลดสำเร็จ!",
-        description: `คุณได้รับ ${campaign.points} แต้มจากกิจกรรม ${campaign.title}`,
-      });
-      
-      // Reset form
-      setPreview(null);
-      setCaption('');
-      
-      // Navigate to gallery tab
-      setActiveTab('gallery');
-      
-    } catch (error: any) {
-      console.error('Error uploading activity:', error);
+      console.error('Error fetching campaign:', error);
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
-        description: error.message || "ไม่สามารถอัพโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+        description: "ไม่สามารถโหลดข้อมูลแคมเปญได้"
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
-  
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
+
+  const checkUserParticipation = async () => {
+    if (!user || !id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('title', campaign?.title)
+        .limit(1);
+
+      if (error) throw error;
+
+      setUserHasParticipated(data && data.length > 0);
+    } catch (error) {
+      console.error('Error checking participation:', error);
+    }
   };
 
-  const navigateToTab = (tabValue: string) => {
-    setActiveTab(tabValue);
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
   };
-  
-  if (!user && activeTab === 'participate') {
-    return <Navigate to="/login" state={{ from: `/campaigns/${slug}` }} replace />;
+
+  const handleSubmit = async () => {
+    if (!user || !campaign) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาเข้าสู่ระบบ",
+        description: "คุณต้องเข้าสู่ระบบเพื่อเข้าร่วมแคมเปญ"
+      });
+      return;
+    }
+
+    if (!selectedFile) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาเลือกรูปภาพ",
+        description: "คุณต้องอัปโหลดรูปภาพเพื่อเข้าร่วมแคมเปญ"
+      });
+      return;
+    }
+
+    if (!description.trim()) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาใส่คำอธิบาย",
+        description: "คุณต้องใส่คำอธิบายกิจกรรมของคุณ"
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Upload image to Supabase Storage
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Date.now()}_${user.id}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('campaign-images')
+        .upload(`activities/${fileName}`, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('campaign-images')
+        .getPublicUrl(uploadData.path);
+
+      // Create user activity record
+      const { error: insertError } = await supabase
+        .from('campaigns')
+        .insert({
+          title: `${campaign.title} - กิจกรรมของ ${user.email}`,
+          description: description,
+          image_url: publicUrl,
+          points: campaign.points,
+          user_id: user.id,
+          activity_type: campaign.activity_type,
+          status: 'completed'
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "เข้าร่วมสำเร็จ!",
+        description: `คุณได้รับ ${campaign.points} แต้มจากการเข้าร่วมแคมเปญนี้`
+      });
+
+      // Reset form
+      setSelectedFile(null);
+      setPreview(null);
+      setDescription('');
+      setUserHasParticipated(true);
+
+    } catch (error) {
+      console.error('Error submitting activity:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถส่งกิจกรรมได้ กรุณาลองใหม่อีกครั้ง"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-eco-teal border-t-transparent mx-auto mb-4"></div>
+            <p className="text-gray-500">กำลังโหลดข้อมูลแคมเปญ...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
-  
-  const CampaignIcon = campaign.icon;
-  
+
+  if (!campaign) {
+    return <Navigate to="/campaigns" replace />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow">
-        {/* Hero Section with Cover Image */}
-        <section className="relative h-[300px] md:h-[400px] overflow-hidden">
-          <img 
-            src={campaign.coverImage} 
-            alt={campaign.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-            <div className="container px-4 md:px-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Badge className={`
-                  ${campaign.type === 'ongoing' ? 'bg-eco-teal' : 
-                    campaign.type === 'special' ? 'bg-amber-500' : 
-                    campaign.type === 'contest' ? 'bg-purple-500' : 'bg-blue-500'}
-                `}>
-                  {campaign.type === 'ongoing' ? 'กำลังดำเนินการ' : 
-                    campaign.type === 'special' ? 'กิจกรรมพิเศษ' : 
-                    campaign.type === 'contest' ? 'การประกวด' : ''}
-                </Badge>
-                <div className="flex items-center gap-1 text-white/80 text-sm">
-                  <Users className="h-4 w-4" />
-                  <span>{campaign.participants} คนเข้าร่วม</span>
+      <main className="flex-grow py-10 bg-eco-light">
+        <div className="container px-4 md:px-6">
+          {/* Campaign Header */}
+          <div className="relative mb-8">
+            <div className="aspect-video md:aspect-[3/1] relative rounded-xl overflow-hidden">
+              <img 
+                src={campaign.image_url || "https://placehold.co/1200x400/e5f7f0/2c7873?text=Campaign+Image"}
+                alt={campaign.title || 'Campaign'}
+                className="object-cover w-full h-full"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {campaign.tags?.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      style={{ 
+                        backgroundColor: tag.color + '20', 
+                        color: tag.color, 
+                        borderColor: tag.color 
+                      }}
+                      className="border"
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                  {campaign.title || 'แคมเปญ'}
+                </h1>
+                <div className="flex items-center gap-4 text-white/90">
+                  <div className="flex items-center gap-1">
+                    <Award className="h-5 w-5" />
+                    <span>{campaign.points} แต้ม/ครั้ง</span>
+                  </div>
+                  {campaign.start_date && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-5 w-5" />
+                      <span>เริ่ม: {new Date(campaign.start_date).toLocaleDateString('th-TH')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-2">
-                <CampaignIcon className="h-6 w-6" />
-                {campaign.title}
-              </h1>
-              <p className="text-white/90 max-w-2xl">{campaign.description}</p>
             </div>
           </div>
-        </section>
-        
-        {/* Main Content */}
-        <section className="py-10 bg-eco-light">
-          <div className="container px-4 md:px-6">
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <div className="flex justify-center mb-6">
-                <TabsList className="bg-white/50 p-1">
-                  <TabsTrigger value="about">รายละเอียด</TabsTrigger>
-                  <TabsTrigger value="participate">ร่วมกิจกรรม</TabsTrigger>
-                  <TabsTrigger value="gallery">แกลเลอรี่</TabsTrigger>
-                </TabsList>
-              </div>
-              
-              {/* About Tab */}
-              <TabsContent value="about">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2">
-                    <Card className="border-none shadow-lg mb-6">
-                      <CardContent className="pt-6">
-                        <div className="prose max-w-none">
-                          <h2 className="text-2xl font-bold text-eco-blue mb-4">เกี่ยวกับกิจกรรม</h2>
-                          {campaign.longDescription.split('\n\n').map((paragraph, i) => (
-                            <p key={i} className="mb-4 text-gray-700">{paragraph}</p>
-                          ))}
-                          
-                          <h3 className="text-xl font-bold text-eco-blue mt-8 mb-4">กฎกติกาการร่วมกิจกรรม</h3>
-                          <ul className="list-disc pl-5 space-y-2">
-                            {campaign.rules.map((rule, index) => (
-                              <li key={index} className="text-gray-700">{rule}</li>
-                            ))}
-                          </ul>
-                          
-                          <div className="mt-8 flex items-center justify-center">
-                            <Button 
-                              size="lg" 
-                              className="bg-eco-gradient hover:opacity-90"
-                              onClick={() => navigateToTab('participate')}
-                            >
-                              ร่วมกิจกรรมเลย
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="details">รายละเอียด</TabsTrigger>
+              <TabsTrigger value="participate">ร่วมกิจกรรม</TabsTrigger>
+              <TabsTrigger value="gallery">แกลเลอรี่</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="mt-6">
+              <Card className="border-none shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-2xl text-eco-blue">รายละเอียดแคมเปญ</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">คำอธิบาย</h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {campaign.description || "ร่วมแคมเปญรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+                    </p>
                   </div>
                   
-                  <div>
-                    <Card className="border-none shadow-lg sticky top-24">
-                      <CardContent className="pt-6">
-                        <h3 className="font-semibold text-xl text-eco-blue mb-6">รายละเอียดกิจกรรม</h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between pb-3 border-b">
-                            <span className="text-gray-600">ประเภท</span>
-                            <span className="font-medium text-eco-blue">{
-                              campaign.category === 'reduce' ? 'ลดการใช้' : 
-                              campaign.category === 'reuse' ? 'นำกลับมาใช้ซ้ำ' : 'รีไซเคิล'
-                            }</span>
-                          </div>
-                          <div className="flex items-center justify-between pb-3 border-b">
-                            <span className="text-gray-600">คะแนน</span>
-                            <span className="font-medium text-eco-blue">{campaign.points} แต้ม/ครั้ง</span>
-                          </div>
-                          <div className="flex items-center justify-between pb-3 border-b">
-                            <span className="text-gray-600">คะแนนโบนัส</span>
-                            <span className="font-medium text-eco-blue">{campaign.bonusPoints}</span>
-                          </div>
-                          <div className="flex items-center justify-between pb-3 border-b">
-                            <span className="text-gray-600">ผู้เข้าร่วม</span>
-                            <span className="font-medium text-eco-blue">{campaign.participants} คน</span>
-                          </div>
-                          <div className="flex items-center justify-between pb-3 border-b">
-                            <span className="text-gray-600">วันสิ้นสุด</span>
-                            <span className="font-medium text-eco-blue">{campaign.endDate || 'ไม่มีกำหนด'}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-8 bg-eco-teal/10 rounded-lg p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="h-10 w-10 rounded-full bg-eco-teal/20 flex items-center justify-center">
-                              <Award className="h-5 w-5 text-eco-teal" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-eco-blue">ร่วมกิจกรรมวันนี้</h4>
-                              <p className="text-sm text-gray-600">แชร์ภาพกิจกรรมของคุณ</p>
-                            </div>
-                          </div>
-                          <Button 
-                            onClick={() => navigateToTab('participate')}
-                            className="w-full bg-eco-gradient hover:opacity-90"
-                          >
-                            ร่วมกิจกรรมเลย
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              {/* Participate Tab */}
-              <TabsContent value="participate" id="participate">
-                <Card className="border-none shadow-lg">
-                  <CardContent className="pt-6">
-                    <div className="max-w-2xl mx-auto">
-                      <h2 className="text-2xl font-bold text-eco-blue mb-2">ร่วมกิจกรรม {campaign.title}</h2>
-                      <p className="text-gray-600 mb-6">อัพโหลดรูปภาพและคำอธิบายเพื่อร่วมกิจกรรมและรับแต้มสะสม</p>
-                      
-                      <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Target className="h-5 w-5 text-eco-teal" />
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            รูปภาพกิจกรรม
-                          </label>
-                          {preview ? (
-                            <div className="relative">
-                              <img 
-                                src={preview} 
-                                alt="Preview" 
-                                className="w-full h-64 object-cover rounded-md border"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="absolute top-2 right-2 bg-white"
-                                onClick={() => setPreview(null)}
-                                disabled={isSubmitting}
-                              >
-                                เปลี่ยนรูป
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center w-full">
-                              <label
-                                htmlFor="image"
-                                className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer border-gray-300 hover:border-eco-teal bg-gray-50 hover:bg-gray-100"
-                              >
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                                  <p className="mb-2 text-sm text-gray-500">
-                                    <span className="font-semibold">คลิกเพื่ออัพโหลดรูปภาพ</span>
-                                  </p>
-                                  <p className="text-xs text-gray-500">PNG, JPG หรือ HEIC (สูงสุด 5 MB)</p>
-                                </div>
-                                <input
-                                  id="image"
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleImageChange}
-                                  disabled={isSubmitting}
-                                />
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            คำอธิบาย
-                          </label>
-                          <textarea 
-                            rows={4} 
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                            placeholder={`อธิบายสั้นๆ เกี่ยวกับกิจกรรม ${campaign.title} ของคุณ...`}
-                            value={caption}
-                            onChange={(e) => setCaption(e.target.value)}
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                        
-                        <div className="flex flex-col gap-2">
-                          <Button 
-                            onClick={handleSubmit}
-                            className="w-full bg-eco-gradient hover:opacity-90"
-                            size="lg"
-                            disabled={isSubmitting}
-                          >
-                            {isSubmitting ? 'กำลังอัพโหลด...' : 'อัพโหลดและรับแต้ม'}
-                          </Button>
-                          <p className="text-center text-sm text-gray-500">
-                            รูปภาพที่อัพโหลดอาจถูกใช้เพื่อประชาสัมพันธ์กิจกรรม
-                          </p>
+                          <p className="font-medium">คะแนนที่ได้รับ</p>
+                          <p className="text-gray-600">{campaign.points} แต้มต่อการเข้าร่วม</p>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              {/* Gallery Tab */}
-              <TabsContent value="gallery">
-                <div className="mb-6 text-center">
-                  <h2 className="text-2xl font-bold text-eco-blue mb-2">แกลเลอรี่กิจกรรม</h2>
-                  <p className="text-gray-600">ภาพกิจกรรมจากผู้เข้าร่วมกิจกรรม {campaign.title}</p>
-                </div>
-                
-                {isLoading ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
-                  </div>
-                ) : recentActivities.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {recentActivities.map((item) => (
-                      <Card key={item.id} className="overflow-hidden border-none shadow-lg">
-                        <div className="aspect-square relative">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.description}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                        <CardContent className="pt-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
-                              <img 
-                                src={item.user?.avatar_url || `https://i.pravatar.cc/100?img=${Math.floor(Math.random() * 70)}`} 
-                                alt={item.user?.full_name || 'ผู้ใช้'} 
-                                className="h-full w-full object-cover" 
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-eco-blue">{item.user?.full_name || 'ผู้ใช้'}</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </p>
-                            </div>
+                      
+                      {campaign.activity_type && (
+                        <div className="flex items-center gap-3">
+                          <Users className="h-5 w-5 text-eco-teal" />
+                          <div>
+                            <p className="font-medium">ประเภทกิจกรรม</p>
+                            <p className="text-gray-600">{campaign.activity_type}</p>
                           </div>
-                          <p className="text-gray-600 text-sm">{item.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {campaign.start_date && (
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-5 w-5 text-eco-teal" />
+                          <div>
+                            <p className="font-medium">วันที่เริ่ม</p>
+                            <p className="text-gray-600">
+                              {new Date(campaign.start_date).toLocaleDateString('th-TH')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {campaign.end_date && (
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-5 w-5 text-eco-teal" />
+                          <div>
+                            <p className="font-medium">วันที่สิ้นสุด</p>
+                            <p className="text-gray-600">
+                              {new Date(campaign.end_date).toLocaleDateString('th-TH')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12 bg-white rounded-lg shadow">
-                    <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-medium text-gray-700 mb-2">ยังไม่มีรูปภาพในแกลเลอรี่</h3>
-                    <p className="text-gray-500 mb-6">เป็นคนแรกที่แชร์รูปภาพกิจกรรม {campaign.title}</p>
-                    <Button 
-                      onClick={() => navigateToTab('participate')}
-                      className="bg-eco-gradient hover:opacity-90"
-                    >
-                      ร่วมกิจกรรมเลย
-                    </Button>
-                  </div>
-                )}
-                
-                <div className="mt-8 text-center">
-                  <p className="text-gray-600">
-                    อัพโหลดรูปภาพของคุณเพื่อร่วมแสดงในแกลเลอรี่
-                  </p>
-                  <Button 
-                    onClick={() => navigateToTab('participate')}
-                    className="mt-4 bg-eco-gradient hover:opacity-90"
-                  >
-                    ร่วมกิจกรรมเลย
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="participate" className="mt-6">
+              <Card className="border-none shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-2xl text-eco-blue">ร่วมกิจกรรม</CardTitle>
+                  <CardDescription>
+                    อัปโหลดรูปภาพและแชร์ประสบการณ์การทำกิจกรรมรักษ์โลกของคุณ
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {userHasParticipated ? (
+                    <div className="text-center py-12">
+                      <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                        <Award className="h-10 w-10 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-green-600 mb-2">เข้าร่วมแล้ว!</h3>
+                      <p className="text-gray-600">
+                        คุณได้เข้าร่วมแคมเปญนี้แล้วและได้รับ {campaign.points} แต้ม
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <ActivityImageUpload
+                        preview={preview}
+                        onChange={handleFileChange}
+                        isRequired
+                      />
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="description" className="text-sm font-medium">
+                          อธิบายกิจกรรมของคุณ <span className="text-red-500">*</span>
+                        </label>
+                        <Textarea
+                          id="description"
+                          placeholder="เล่าถึงกิจกรรมที่คุณทำ เช่น ใช้ถุงผ้าไปซื้อของที่ตลาด..."
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          rows={4}
+                        />
+                      </div>
+                      
+                      <Button 
+                        onClick={handleSubmit}
+                        disabled={submitting || !selectedFile || !description.trim()}
+                        className="w-full bg-eco-gradient hover:opacity-90"
+                      >
+                        {submitting ? "กำลังส่ง..." : `ส่งกิจกรรมและรับ ${campaign.points} แต้ม`}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gallery" className="mt-6">
+              <Card className="border-none shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-2xl text-eco-blue">แกลเลอรี่กิจกรรม</CardTitle>
+                  <CardDescription>
+                    ชมกิจกรรมที่ผู้ใช้อื่นๆ ได้เข้าร่วมแล้ว
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ActivityGallery showCaption={true} showUserActivities={true} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </main>
       <Footer />
     </div>
