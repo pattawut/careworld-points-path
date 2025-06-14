@@ -59,21 +59,6 @@ export const Hero = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-eco-teal/30 to-transparent"></div>
             </div>
-            
-            {/* Floating stats cards */}
-            <div className="absolute -top-4 -right-4 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-eco-teal">1,000+</div>
-                <div className="text-sm text-gray-600">กิจกรรมเสร็จแล้ว</div>
-              </div>
-            </div>
-            
-            <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-eco-blue">500+</div>
-                <div className="text-sm text-gray-600">สมาชิกใหม่</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
