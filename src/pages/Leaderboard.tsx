@@ -93,17 +93,38 @@ const Leaderboard = () => {
               .limit(1)
               .single();
 
+            // Get actual eco_points for monthly and weekly calculations
+            // Calculate monthly points (get activities from last 30 days and sum their points)
+            const { data: monthlyActivities } = await supabase
+              .from('campaigns')
+              .select('points')
+              .eq('user_id', user.id)
+              .gte('created_at', thirtyDaysAgo.toISOString());
+
+            const monthlyPoints = monthlyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+
+            // Calculate weekly points (get activities from last 7 days and sum their points)
+            const { data: weeklyActivities } = await supabase
+              .from('campaigns')
+              .select('points')
+              .eq('user_id', user.id)
+              .gte('created_at', sevenDaysAgo.toISOString());
+
+            const weeklyPoints = weeklyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+
             return {
               ...user,
               activities_count: totalCount || 0,
               monthly_count: monthlyCount || 0,
               weekly_count: weeklyCount || 0,
+              monthly_points: monthlyPoints,
+              weekly_points: weeklyPoints,
               latest_activity: latestActivity || undefined
             };
           })
         );
 
-        // Sort and set all-time leaderboard
+        // Sort and set all-time leaderboard (using actual eco_points)
         const sortedAllTime = usersWithActivities
           .sort((a, b) => (b.eco_points || 0) - (a.eco_points || 0))
           .map(user => ({
@@ -115,12 +136,12 @@ const Leaderboard = () => {
             latest_activity: user.latest_activity
           }));
 
-        // Calculate monthly points (approximate based on recent activities)
+        // Monthly leaderboard (using calculated monthly points)
         const monthlyLeaderboard = usersWithActivities
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
-            eco_points: user.monthly_count * 10, // Approximate monthly points
+            eco_points: user.monthly_points,
             avatar_url: user.avatar_url,
             activities_count: user.monthly_count,
             latest_activity: user.latest_activity
@@ -128,12 +149,12 @@ const Leaderboard = () => {
           .filter(user => user.eco_points > 0)
           .sort((a, b) => b.eco_points - a.eco_points);
 
-        // Calculate weekly points (approximate based on recent activities)
+        // Weekly leaderboard (using calculated weekly points)
         const weeklyLeaderboard = usersWithActivities
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
-            eco_points: user.weekly_count * 10, // Approximate weekly points
+            eco_points: user.weekly_points,
             avatar_url: user.avatar_url,
             activities_count: user.weekly_count,
             latest_activity: user.latest_activity

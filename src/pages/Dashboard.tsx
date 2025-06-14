@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,12 +9,53 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Award, Calendar, Users, RecycleIcon, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { ActivityForm } from '@/components/ActivityForm';
+import { ActivityForm } from '@/components/activity/ActivityForm';
 import { ActivityList } from '@/components/ActivityList';
 import { AvailableCampaigns } from '@/components/dashboard/AvailableCampaigns';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserStats = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const [userActivitiesCount, setUserActivitiesCount] = useState(0);
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get user's activities count
+        const { count: activitiesCount, error: activitiesError } = await supabase
+          .from('campaigns')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+          
+        if (activitiesError) throw activitiesError;
+        
+        // Get user's rank
+        const { data: rankData, error: rankError } = await supabase
+          .from('profiles')
+          .select('id, eco_points')
+          .order('eco_points', { ascending: false });
+          
+        if (rankError) throw rankError;
+        
+        const userRankPosition = rankData.findIndex(p => p.id === user.id) + 1;
+        
+        setUserActivitiesCount(activitiesCount || 0);
+        setUserRank(userRankPosition > 0 ? userRankPosition : null);
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserStats();
+  }, [user]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -36,7 +78,9 @@ const UserStats = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">กิจกรรมที่เข้าร่วม</p>
-              <h3 className="text-2xl font-bold text-eco-blue">-</h3>
+              <h3 className="text-2xl font-bold text-eco-blue">
+                {loading ? '-' : userActivitiesCount}
+              </h3>
             </div>
             <div className="h-12 w-12 rounded-full bg-eco-teal/10 flex items-center justify-center">
               <Calendar className="h-6 w-6 text-eco-teal" />
@@ -50,7 +94,9 @@ const UserStats = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">อันดับปัจจุบัน</p>
-              <h3 className="text-2xl font-bold text-eco-blue">-</h3>
+              <h3 className="text-2xl font-bold text-eco-blue">
+                {loading ? '-' : (userRank ? `#${userRank}` : '-')}
+              </h3>
             </div>
             <div className="h-12 w-12 rounded-full bg-eco-teal/10 flex items-center justify-center">
               <Users className="h-6 w-6 text-eco-teal" />
@@ -64,7 +110,9 @@ const UserStats = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">ขยะที่คัดแยกแล้ว</p>
-              <h3 className="text-2xl font-bold text-eco-blue">-</h3>
+              <h3 className="text-2xl font-bold text-eco-blue">
+                {loading ? '-' : `${userActivitiesCount * 2} กก.`}
+              </h3>
             </div>
             <div className="h-12 w-12 rounded-full bg-eco-teal/10 flex items-center justify-center">
               <RecycleIcon className="h-6 w-6 text-eco-teal" />
@@ -86,7 +134,7 @@ const NextLevel = () => {
     <Card className="border-none shadow-md mb-8">
       <CardHeader className="pb-3">
         <CardTitle>ความคืบหน้าระดับถัดไป</CardTitle>
-        <CardDescription>อีก {nextLevel - currentPoints} คะแนน เพื่อไปสู่ระดับ "นักอนุรักษ์ธรรมชาติ"</CardDescription>
+        <CardDescription>อีก {Math.max(0, nextLevel - currentPoints)} คะแนน เพื่อไปสู่ระดับ "นักอนุรักษ์ธรรมชาติ"</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
