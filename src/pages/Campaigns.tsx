@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ type CampaignTag = {
 const Campaigns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [upcomingCampaigns, setUpcomingCampaigns] = useState<Campaign[]>([]);
   const [campaignTags, setCampaignTags] = useState<CampaignTag[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -63,19 +65,29 @@ const Campaigns = () => {
       
       setCampaignTags(tagsData || []);
       
-      // Fetch campaigns
-      const { data: campaignsData, error: campaignsError } = await supabase
+      // Fetch active campaigns
+      const { data: activeCampaignsData, error: activeCampaignsError } = await supabase
         .from('campaigns')
         .select('*')
-        .in('status', ['active', 'promoted', 'coming_soon'])
+        .in('status', ['active', 'promoted'])
         .is('user_id', null)
         .order('created_at', { ascending: false });
           
-      if (campaignsError) throw campaignsError;
+      if (activeCampaignsError) throw activeCampaignsError;
       
-      // Fetch tags for each campaign
-      const campaignsWithTags = await Promise.all(
-        (campaignsData || []).map(async (campaign) => {
+      // Fetch upcoming campaigns
+      const { data: upcomingCampaignsData, error: upcomingCampaignsError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('status', 'coming_soon')
+        .is('user_id', null)
+        .order('created_at', { ascending: false });
+          
+      if (upcomingCampaignsError) throw upcomingCampaignsError;
+      
+      // Fetch tags for each active campaign
+      const activeCampaignsWithTags = await Promise.all(
+        (activeCampaignsData || []).map(async (campaign) => {
           const { data: tagData, error: tagError } = await supabase
             .from('campaign_tag_relations')
             .select(`
@@ -113,7 +125,46 @@ const Campaigns = () => {
         })
       );
       
-      setCampaigns(campaignsWithTags as Campaign[]);
+      // Fetch tags for each upcoming campaign
+      const upcomingCampaignsWithTags = await Promise.all(
+        (upcomingCampaignsData || []).map(async (campaign) => {
+          const { data: tagData, error: tagError } = await supabase
+            .from('campaign_tag_relations')
+            .select(`
+              campaign_tags (
+                id,
+                name,
+                color
+              )
+            `)
+            .eq('campaign_id', campaign.id);
+
+          if (tagError) {
+            console.error('Error fetching tags for upcoming campaign:', campaign.id, tagError);
+            return {
+              ...campaign,
+              tags: [],
+              type: 'upcoming',
+              category: campaign.activity_type || 'general',
+              path: `/campaigns/${campaign.id}`,
+              participants: 0
+            };
+          }
+
+          const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+          return {
+            ...campaign,
+            tags,
+            type: 'upcoming',
+            category: campaign.activity_type || 'general',
+            path: `/campaigns/${campaign.id}`,
+            participants: 0
+          };
+        })
+      );
+      
+      setCampaigns(activeCampaignsWithTags as Campaign[]);
+      setUpcomingCampaigns(upcomingCampaignsWithTags as Campaign[]);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -124,6 +175,7 @@ const Campaigns = () => {
       
       // Fallback to sample data
       setCampaigns(getSampleCampaigns());
+      setUpcomingCampaigns([]);
       setCampaignTags([
         { id: 'all', name: 'ทั้งหมด', color: '#6B7280' },
         { id: 'bag', name: 'ถุงผ้า', color: '#10B981' },
@@ -178,35 +230,6 @@ const Campaigns = () => {
       path: "/campaigns/recycle",
       participants: 420,
       status: 'active',
-      activity_type: 'recycle',
-      start_date: null,
-      end_date: null
-    }
-  ];
-  
-  const upcomingCampaigns = [
-    {
-      id: 'upcoming-1',
-      title: "Plastic-Free July",
-      description: "ท้าทายตัวเองให้งดใช้พลาสติกแบบใช้ครั้งเดียวตลอดเดือนกรกฎาคม",
-      points: 10,
-      date: "1-31 กรกฎาคม 2025",
-      image_url: "https://images.unsplash.com/photo-1682957317691-36e7de9bd15e?auto=format&fit=crop&w=500&q=80",
-      path: "/campaigns/upcoming/plastic-free-july",
-      status: 'coming_soon',
-      activity_type: 'reduce',
-      start_date: null,
-      end_date: null
-    },
-    {
-      id: 'upcoming-2',
-      title: "วันทะเลโลก",
-      description: "กิจกรรมพิเศษเนื่องในวันทะเลโลก ร่วมเก็บขยะชายหาดและจัดนิทรรศการให้ความรู้",
-      points: 5,
-      date: "8 มิถุนายน 2025",
-      image_url: "https://images.unsplash.com/photo-1577504075702-8c868da9906e?auto=format&fit=crop&w=500&q=80",
-      path: "/campaigns/upcoming/world-oceans-day",
-      status: 'coming_soon',
       activity_type: 'recycle',
       start_date: null,
       end_date: null
@@ -278,6 +301,8 @@ const Campaigns = () => {
         return 'bg-amber-500';
       case 'contest':
         return 'bg-purple-500';
+      case 'upcoming':
+        return 'bg-blue-500';
       default:
         return 'bg-blue-500';
     }
@@ -291,6 +316,8 @@ const Campaigns = () => {
         return 'กิจกรรมพิเศษ';
       case 'contest':
         return 'การประกวด';
+      case 'upcoming':
+        return 'กำลังจะมาถึง';
       default:
         return 'กิจกรรม';
     }
@@ -365,6 +392,59 @@ const Campaigns = () => {
       <CardFooter>
         <Button asChild className="w-full bg-eco-gradient hover:opacity-90">
           <Link to={campaign.path || `/campaigns/${campaign.id}`}>เข้าร่วมแคมเปญ</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
+  const renderUpcomingCampaignCard = (campaign: Campaign) => (
+    <Card key={campaign.id} className="overflow-hidden border-none shadow-lg">
+      <div className="aspect-video relative">
+        <img 
+          src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
+          alt={campaign.title || 'Campaign'}
+          className="object-cover w-full h-full"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+        <div className="absolute bottom-4 left-4 right-4">
+          <Badge className="bg-blue-500 mb-2">กำลังจะมาถึง</Badge>
+          <h3 className="text-xl font-bold text-white mb-1">{campaign.title || 'แคมเปญ'}</h3>
+          {campaign.start_date && (
+            <p className="text-white/90 text-sm">
+              เริ่ม: {new Date(campaign.start_date).toLocaleDateString('th-TH')}
+            </p>
+          )}
+        </div>
+      </div>
+      <CardContent className="pt-4 pb-2">
+        <p className="text-gray-600 mb-3">
+          {campaign.description || "ร่วมแคมเปญรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+        </p>
+        
+        {/* Display campaign tags */}
+        {campaign.tags && campaign.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {campaign.tags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                style={{ 
+                  backgroundColor: tag.color + '20', 
+                  color: tag.color, 
+                  borderColor: tag.color 
+                }}
+                className="text-xs"
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between items-center">
+        <span className="font-semibold text-eco-blue">{campaign.points} แต้ม</span>
+        <Button asChild variant="outline" className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
+          <Link to={campaign.path || `/campaigns/${campaign.id}`}>ดูรายละเอียด</Link>
         </Button>
       </CardFooter>
     </Card>
@@ -447,32 +527,13 @@ const Campaigns = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {upcomingCampaigns.map(campaign => (
-                  <Card key={campaign.id} className="overflow-hidden border-none shadow-lg">
-                    <div className="aspect-video relative">
-                      <img 
-                        src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
-                        alt={campaign.title}
-                        className="object-cover w-full h-full"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <Badge className="bg-blue-500 mb-2">กำลังจะมาถึง</Badge>
-                        <h3 className="text-xl font-bold text-white mb-1">{campaign.title}</h3>
-                        <p className="text-white/90 text-sm">{campaign.date}</p>
-                      </div>
-                    </div>
-                    <CardContent className="pt-4 pb-2">
-                      <p className="text-gray-600">{campaign.description}</p>
-                    </CardContent>
-                    <CardFooter className="flex justify-between items-center">
-                      <span className="font-semibold text-eco-blue">{campaign.points} แต้ม</span>
-                      <Button asChild variant="outline" className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
-                        <Link to={campaign.path}>ดูรายละเอียด</Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                {upcomingCampaigns.length > 0 ? (
+                  upcomingCampaigns.map(renderUpcomingCampaignCard)
+                ) : (
+                  <div className="col-span-full py-12 text-center">
+                    <p className="text-gray-500">ยังไม่มีแคมเปญที่กำลังจะมาถึง</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
