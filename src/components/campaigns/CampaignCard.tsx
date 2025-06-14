@@ -29,12 +29,19 @@ export const CampaignCard = ({ campaign }: CampaignCardProps) => {
   const getStatusBadge = (status: string) => {
     const statusMap = {
       active: { label: 'เปิดใช้งาน', variant: 'default' as const },
-      coming_soon: { label: 'เร็วๆ นี้', variant: 'outline' as const },
+      coming_soon: { label: 'เร็วๆ นี้', variant: 'secondary' as const, className: 'bg-eco-blue text-white' },
       promoted: { label: 'โปรโมต', variant: 'destructive' as const }
     };
     
     const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.active;
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    return (
+      <Badge 
+        variant={statusInfo.variant}
+        className={statusInfo.className}
+      >
+        {statusInfo.label}
+      </Badge>
+    );
   };
 
   return (
