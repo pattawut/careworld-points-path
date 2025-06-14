@@ -74,15 +74,14 @@ const Campaigns = () => {
           
       if (activeCampaignsError) throw activeCampaignsError;
       
-      // Fetch upcoming campaigns (coming_soon status)
-      const { data: upcomingCampaignsData, error: upcomingCampaignsError } = await supabase
+      // Fetch all campaigns for upcoming filtering
+      const { data: allCampaignsData, error: allCampaignsError } = await supabase
         .from('campaigns')
         .select('*')
-        .eq('status', 'coming_soon')
         .is('user_id', null)
         .order('created_at', { ascending: false });
           
-      if (upcomingCampaignsError) throw upcomingCampaignsError;
+      if (allCampaignsError) throw allCampaignsError;
       
       // Fetch tags for each active campaign
       const activeCampaignsWithTags = await Promise.all(
@@ -124,9 +123,9 @@ const Campaigns = () => {
         })
       );
       
-      // Fetch tags for each upcoming campaign
-      const upcomingCampaignsWithTags = await Promise.all(
-        (upcomingCampaignsData || []).map(async (campaign) => {
+      // Fetch tags for all campaigns and filter upcoming by tag 'เร็วๆ นี้'
+      const allCampaignsWithTags = await Promise.all(
+        (allCampaignsData || []).map(async (campaign) => {
           const { data: tagData, error: tagError } = await supabase
             .from('campaign_tag_relations')
             .select(`
@@ -139,7 +138,7 @@ const Campaigns = () => {
             .eq('campaign_id', campaign.id);
 
           if (tagError) {
-            console.error('Error fetching tags for upcoming campaign:', campaign.id, tagError);
+            console.error('Error fetching tags for campaign:', campaign.id, tagError);
             return {
               ...campaign,
               tags: [],
@@ -161,9 +160,14 @@ const Campaigns = () => {
           };
         })
       );
+
+      // Filter upcoming campaigns by tag 'เร็วๆ นี้'
+      const upcomingCampaignsFiltered = allCampaignsWithTags.filter(campaign => 
+        campaign.tags?.some(tag => tag.name === 'เร็วๆ นี้')
+      );
       
       setCampaigns(activeCampaignsWithTags as Campaign[]);
-      setUpcomingCampaigns(upcomingCampaignsWithTags as Campaign[]);
+      setUpcomingCampaigns(upcomingCampaignsFiltered as Campaign[]);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
