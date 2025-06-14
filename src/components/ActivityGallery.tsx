@@ -38,18 +38,22 @@ export const ActivityGallery = ({ showCaption = false, limit = 6, showUserActivi
       try {
         setLoading(true);
         
-        // Fetch campaigns with user activities
+        // Fetch campaigns
         let query = supabase
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
 
         if (showUserActivities) {
-          // Show only user-created activities (campaigns with user_id)
-          query = query.not('user_id', 'is', null);
+          // Show only user-created activities (campaigns with user_id and image_url)
+          query = query
+            .not('user_id', 'is', null)
+            .not('image_url', 'is', null);
         } else {
           // Show system campaigns (campaigns without user_id or with specific status)
-          query = query.in('status', ['active', 'promoted', 'coming_soon']);
+          query = query
+            .is('user_id', null)
+            .in('status', ['active', 'promoted', 'coming_soon']);
         }
 
         if (limit) {
@@ -68,38 +72,51 @@ export const ActivityGallery = ({ showCaption = false, limit = 6, showUserActivi
           return;
         }
 
-        // Get unique user IDs for profile lookup
-        const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
-        
-        let profilesData: any[] = [];
-        if (userIds.length > 0) {
-          const { data, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', userIds);
+        // Get unique user IDs for profile lookup (only for user activities)
+        if (showUserActivities) {
+          const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
+          
+          let profilesData: any[] = [];
+          if (userIds.length > 0) {
+            const { data, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .in('id', userIds);
 
-          if (profilesError) {
-            throw profilesError;
+            if (profilesError) {
+              throw profilesError;
+            }
+            profilesData = data || [];
           }
-          profilesData = data || [];
+
+          // Create a lookup map for profiles
+          const profilesMap = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {} as Record<string, any>);
+
+          // Combine campaigns with their user data
+          const campaignsWithUserData = campaignsData.map(campaign => ({
+            ...campaign,
+            user: {
+              full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
+              avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null
+            }
+          })) as Campaign[];
+
+          setCampaigns(campaignsWithUserData);
+        } else {
+          // For system campaigns, set default user info
+          const campaignsWithUserData = campaignsData.map(campaign => ({
+            ...campaign,
+            user: {
+              full_name: 'ระบบ',
+              avatar_url: null
+            }
+          })) as Campaign[];
+
+          setCampaigns(campaignsWithUserData);
         }
-
-        // Create a lookup map for profiles
-        const profilesMap = profilesData.reduce((acc, profile) => {
-          acc[profile.id] = profile;
-          return acc;
-        }, {} as Record<string, any>);
-
-        // Combine campaigns with their user data
-        const campaignsWithUserData = campaignsData.map(campaign => ({
-          ...campaign,
-          user: {
-            full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
-            avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null
-          }
-        })) as Campaign[];
-
-        setCampaigns(campaignsWithUserData);
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -120,6 +137,14 @@ export const ActivityGallery = ({ showCaption = false, limit = 6, showUserActivi
   }
 
   if (campaigns.length === 0) {
+    if (showUserActivities) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">ยังไม่มีใครอัปโหลดกิจกรรม</p>
+          <p className="text-sm text-gray-400">เป็นคนแรกที่แชร์กิจกรรมรักษ์โลกของคุณ!</p>
+        </div>
+      );
+    }
     return <GalleryEmptyState />;
   }
 
