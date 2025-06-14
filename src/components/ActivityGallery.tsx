@@ -1,103 +1,92 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ActivityGalleryItem } from './activity/ActivityGalleryItem';
 import { GalleryLoading } from './activity/GalleryLoading';
 import { GalleryEmptyState } from './activity/GalleryEmptyState';
-import { getAvatarUrl } from '@/utils/avatarUtils';
 
 type ActivityWithUser = {
   id: string;
-  title: string;
-  description: string | null;
+  description: string;
   image_url: string;
+  activity_type: string;
   created_at: string;
-  user_id: string;
+  points: number;
   user: {
-    id: string;
     full_name: string;
     avatar_url: string;
+    id: string;
   };
 };
 
 type ActivityGalleryProps = {
-  showCaption?: boolean;
   showUserActivities?: boolean;
-  limit?: number;
-  userId?: string;
 };
 
-export const ActivityGallery = ({ 
-  showCaption = false, 
-  showUserActivities = false, 
-  limit,
-  userId 
-}: ActivityGalleryProps) => {
+export function ActivityGallery({ showUserActivities = false }: ActivityGalleryProps) {
   const [activities, setActivities] = useState<ActivityWithUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        setLoading(true);
-        
-        let query = supabase
-          .from('campaigns')
-          .select(`
-            id,
-            title,
-            description,
-            image_url,
-            created_at,
-            user_id,
-            profiles!inner(
-              id,
-              full_name,
-              avatar_url
-            )
-          `)
-          .not('image_url', 'is', null)
-          .order('created_at', { ascending: false });
-
-        if (userId) {
-          query = query.eq('user_id', userId);
-        }
-
-        if (limit) {
-          query = query.limit(limit);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          const activitiesWithUser = data.map(activity => ({
-            id: activity.id,
-            title: activity.title || 'ไม่ระบุชื่อกิจกรรม',
-            description: activity.description,
-            image_url: activity.image_url!,
-            created_at: activity.created_at,
-            user_id: activity.user_id!,
-            user: {
-              id: activity.profiles.id,
-              full_name: activity.profiles.full_name || 'ไม่ระบุชื่อ',
-              avatar_url: getAvatarUrl(activity.profiles.avatar_url, activity.profiles.id)
-            }
-          }));
-          
-          setActivities(activitiesWithUser);
-        }
-      } catch (error) {
-        console.error('Error fetching activities:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchActivities();
-  }, [limit, userId]);
+  }, [showUserActivities]);
+
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('activities')
+        .select(`
+          id,
+          description,
+          image_url,
+          activity_type,
+          created_at,
+          points,
+          user_id,
+          profiles!inner(
+            full_name,
+            avatar_url,
+            id
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (showUserActivities) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          query = query.eq('user_id', user.id);
+        }
+      }
+
+      const { data, error } = await query.limit(20);
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedActivities: ActivityWithUser[] = data.map((activity: any) => ({
+          id: activity.id,
+          description: activity.description,
+          image_url: activity.image_url,
+          activity_type: activity.activity_type,
+          created_at: activity.created_at,
+          points: activity.points,
+          user: {
+            full_name: activity.profiles.full_name,
+            avatar_url: activity.profiles.avatar_url,
+            id: activity.profiles.id
+          }
+        }));
+        
+        setActivities(formattedActivities);
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return <GalleryLoading />;
@@ -113,10 +102,8 @@ export const ActivityGallery = ({
         <ActivityGalleryItem
           key={activity.id}
           activity={activity}
-          showCaption={showCaption}
-          showUserActivities={showUserActivities}
         />
       ))}
     </div>
   );
-};
+}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +21,7 @@ import {
 import { Menu, X, LogOut, User, Settings } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from './ui/badge';
+import { getAvatarUrl } from '@/utils/avatarUtils';
 
 const links = [
   { name: 'หน้าหลัก', href: '/' },
@@ -35,28 +37,6 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const isMobile = useIsMobile();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // ตรวจสอบว่าผู้ใช้เป็น admin หรือไม่
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) return;
-      
-      try {
-        const { data } = await (window.supabase as any).from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-          
-        setIsAdmin(!!data);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -80,6 +60,9 @@ export function Navbar() {
     if (path === '/' && location.pathname !== '/') return false;
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
+
+  // Check if user is admin
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <header
@@ -128,7 +111,7 @@ export function Navbar() {
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage
-                        src={profile?.avatar_url || undefined}
+                        src={getAvatarUrl(profile?.avatar_url, user.id)}
                         alt={profile?.full_name || ""}
                       />
                       <AvatarFallback className="text-sm">
@@ -240,7 +223,7 @@ export function Navbar() {
                       <div className="flex items-center gap-3 py-2">
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={profile?.avatar_url || undefined}
+                            src={getAvatarUrl(profile?.avatar_url, user.id)}
                             alt={profile?.full_name || ""}
                           />
                           <AvatarFallback>
@@ -317,11 +300,4 @@ export function Navbar() {
       </div>
     </header>
   );
-}
-
-// This is a hack to make TypeScript happy
-declare global {
-  interface Window {
-    supabase: any;
-  }
 }

@@ -7,20 +7,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/context/auth';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
-import { createAdminAccount } from '@/utils/adminAccountSetup';
 
 const Login = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to dashboard (not admin)
+    // If already logged in, redirect to dashboard
     if (user) {
       navigate('/dashboard');
     }
-    
-    // Create admin account if it doesn't exist
-    createAdminAccount();
   }, [user, navigate]);
 
   return (
