@@ -22,6 +22,7 @@ import { Menu, X, LogOut, User, Settings } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from './ui/badge';
 import { getAvatarUrl } from '@/utils/avatarUtils';
+import { useUserPointLogs } from '@/hooks/useUserPointLogs';
 
 const links = [
   { name: 'หน้าหลัก', href: '/' },
@@ -32,6 +33,7 @@ const links = [
 
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
+  const { totalPoints } = useUserPointLogs();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -100,7 +102,7 @@ export function Navbar() {
                 variant="outline" 
                 className="hidden sm:flex bg-eco-light text-eco-blue border-none"
               >
-                {profile?.eco_points || 0} คะแนน
+                {totalPoints || 0} คะแนน
               </Badge>
 
               <DropdownMenu>
@@ -232,7 +234,7 @@ export function Navbar() {
                         </Avatar>
                         <div>
                           <p className="font-medium">{profile?.full_name}</p>
-                          <p className="text-xs text-gray-500">{profile?.eco_points || 0} คะแนน</p>
+                          <p className="text-xs text-gray-500">{totalPoints || 0} คะแนน</p>
                         </div>
                       </div>
                       <Link

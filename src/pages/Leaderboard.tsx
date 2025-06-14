@@ -37,11 +37,11 @@ const Leaderboard = () => {
       try {
         setLoading(true);
 
-        // Fetch all users with their eco_points
+        // Fetch all users with their profiles
         const { data: users, error: usersError } = await supabase
           .from('profiles')
-          .select('id, full_name, eco_points, avatar_url')
-          .order('eco_points', { ascending: false });
+          .select('id, full_name, avatar_url')
+          .order('full_name', { ascending: true });
 
         if (usersError) {
           throw usersError;
@@ -54,9 +54,19 @@ const Leaderboard = () => {
           return;
         }
 
-        // Get activity counts and latest activities for each user
-        const usersWithActivities = await Promise.all(
+        // Get point totals and activity data for each user
+        const usersWithData = await Promise.all(
           users.map(async (user) => {
+            // Get total points using the database function
+            const { data: totalPointsData, error: totalError } = await supabase
+              .rpc('calculate_user_total_points', { user_uuid: user.id });
+
+            if (totalError) {
+              console.error('Error calculating total points for user:', user.id, totalError);
+            }
+
+            const allTimePoints = totalPointsData || 0;
+
             // Count total activities
             const { count: totalCount } = await supabase
               .from('campaigns')
@@ -93,8 +103,7 @@ const Leaderboard = () => {
               .limit(1)
               .single();
 
-            // Get actual eco_points for monthly and weekly calculations
-            // Calculate monthly points (get activities from last 30 days and sum their points)
+            // Calculate monthly points (sum of points from activities in last 30 days)
             const { data: monthlyActivities } = await supabase
               .from('campaigns')
               .select('points')
@@ -103,7 +112,7 @@ const Leaderboard = () => {
 
             const monthlyPoints = monthlyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
 
-            // Calculate weekly points (get activities from last 7 days and sum their points)
+            // Calculate weekly points (sum of points from activities in last 7 days)
             const { data: weeklyActivities } = await supabase
               .from('campaigns')
               .select('points')
@@ -114,6 +123,7 @@ const Leaderboard = () => {
 
             return {
               ...user,
+              all_time_points: allTimePoints,
               activities_count: totalCount || 0,
               monthly_count: monthlyCount || 0,
               weekly_count: weeklyCount || 0,
@@ -124,20 +134,20 @@ const Leaderboard = () => {
           })
         );
 
-        // Sort and set all-time leaderboard (using actual eco_points)
-        const sortedAllTime = usersWithActivities
-          .sort((a, b) => (b.eco_points || 0) - (a.eco_points || 0))
+        // Sort and set all-time leaderboard (using calculated total points)
+        const sortedAllTime = usersWithData
+          .sort((a, b) => (b.all_time_points || 0) - (a.all_time_points || 0))
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
-            eco_points: user.eco_points || 0,
+            eco_points: user.all_time_points || 0,
             avatar_url: user.avatar_url,
             activities_count: user.activities_count,
             latest_activity: user.latest_activity
           }));
 
         // Monthly leaderboard (using calculated monthly points)
-        const monthlyLeaderboard = usersWithActivities
+        const monthlyLeaderboard = usersWithData
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
@@ -150,7 +160,7 @@ const Leaderboard = () => {
           .sort((a, b) => b.eco_points - a.eco_points);
 
         // Weekly leaderboard (using calculated weekly points)
-        const weeklyLeaderboard = usersWithActivities
+        const weeklyLeaderboard = usersWithData
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
