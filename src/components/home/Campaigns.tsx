@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -129,7 +130,7 @@ export const Campaigns = () => {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-eco-blue mb-3">แคมเปญล่าสุด</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            ร่วมกิจกรรมต่างๆ ของเราเพื่อสร้างการเปลี่ยนแปลงเชิงบวกให้กับสิ่งแวดล้อม
+            ร่วมแคมเปญต่างๆ ของเราเพื่อสร้างการเปลี่ยนแปลงเชิงบวกให้กับสิ่งแวดล้อม
           </p>
         </div>
         
@@ -151,7 +152,7 @@ export const Campaigns = () => {
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title || 'แคมเปญ'}</h3>
                 <p className="text-gray-600 mb-4">
-                  {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
+                  {campaign.description || "ร่วมแคมเปญรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
                 </p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">คะแนน: {campaign.points} แต้ม/ครั้ง</span>
@@ -166,7 +167,7 @@ export const Campaigns = () => {
         
         <div className="text-center mt-10">
           <Button variant="outline" asChild className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
-            <Link to="/activities">ดูกิจกรรมทั้งหมด</Link>
+            <Link to="/campaigns">ดูแคมเปญทั้งหมด</Link>
           </Button>
         </div>
       </div>

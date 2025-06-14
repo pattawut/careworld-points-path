@@ -19,7 +19,7 @@ export const RecentActivities = () => {
         
         <div className="text-center mt-10">
           <Button variant="outline" asChild className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
-            <Link to="/activities">ดูกิจกรรมทั้งหมด</Link>
+            <Link to="/campaigns">ดูแคมเปญทั้งหมด</Link>
           </Button>
         </div>
       </div>

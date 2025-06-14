@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -11,7 +11,6 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Leaderboard from "./pages/Leaderboard";
-import Activities from "./pages/Activities";
 import Education from "./pages/Education";
 import CampaignDetail from "./pages/CampaignDetail";
 import ProfilePage from "./pages/ProfilePage";
@@ -49,7 +48,8 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/activities" element={<Activities />} />
+            {/* Redirect /activities to /campaigns */}
+            <Route path="/activities" element={<Navigate to="/campaigns" replace />} />
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/education" element={<Education />} />
             <Route path="/campaigns/:slug" element={<CampaignDetail />} />
