@@ -21,22 +21,29 @@ type ActivityWithUser = {
 
 type ActivityGalleryProps = {
   showUserActivities?: boolean;
+  showCaption?: boolean;
+  limit?: number;
 };
 
-export function ActivityGallery({ showUserActivities = false }: ActivityGalleryProps) {
+export function ActivityGallery({ 
+  showUserActivities = false, 
+  showCaption = false,
+  limit 
+}: ActivityGalleryProps) {
   const [activities, setActivities] = useState<ActivityWithUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchActivities();
-  }, [showUserActivities]);
+  }, [showUserActivities, limit]);
 
   const fetchActivities = async () => {
     try {
       setLoading(true);
       
+      // Query from campaigns table since activities table doesn't exist
       let query = supabase
-        .from('activities')
+        .from('campaigns')
         .select(`
           id,
           description,
@@ -44,13 +51,9 @@ export function ActivityGallery({ showUserActivities = false }: ActivityGalleryP
           activity_type,
           created_at,
           points,
-          user_id,
-          profiles!inner(
-            full_name,
-            avatar_url,
-            id
-          )
+          user_id
         `)
+        .not('user_id', 'is', null) // Only show user-created campaigns
         .order('created_at', { ascending: false });
 
       if (showUserActivities) {
@@ -60,29 +63,62 @@ export function ActivityGallery({ showUserActivities = false }: ActivityGalleryP
         }
       }
 
-      const { data, error } = await query.limit(20);
+      if (limit) {
+        query = query.limit(limit);
+      } else {
+        query = query.limit(20);
+      }
+
+      const { data: campaignsData, error } = await query;
 
       if (error) throw error;
 
-      if (data) {
-        const formattedActivities: ActivityWithUser[] = data.map((activity: any) => ({
-          id: activity.id,
-          description: activity.description,
-          image_url: activity.image_url,
-          activity_type: activity.activity_type,
-          created_at: activity.created_at,
-          points: activity.points,
+      if (campaignsData && campaignsData.length > 0) {
+        // Get unique user IDs for profile lookup
+        const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
+        
+        let profilesData: any[] = [];
+        if (userIds.length > 0) {
+          const { data, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else {
+            profilesData = data || [];
+          }
+        }
+
+        // Create a lookup map for profiles
+        const profilesMap = profilesData.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, any>);
+
+        // Format the data to match ActivityWithUser type
+        const formattedActivities: ActivityWithUser[] = campaignsData.map((campaign: any) => ({
+          id: campaign.id,
+          description: campaign.description || 'กิจกรรมรักษ์โลก',
+          image_url: campaign.image_url || '',
+          activity_type: campaign.activity_type || 'general',
+          created_at: campaign.created_at,
+          points: campaign.points,
           user: {
-            full_name: activity.profiles.full_name,
-            avatar_url: activity.profiles.avatar_url,
-            id: activity.profiles.id
+            full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
+            avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null,
+            id: campaign.user_id || ''
           }
         }));
         
         setActivities(formattedActivities);
+      } else {
+        setActivities([]);
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
+      setActivities([]);
     } finally {
       setLoading(false);
     }
@@ -102,6 +138,7 @@ export function ActivityGallery({ showUserActivities = false }: ActivityGalleryP
         <ActivityGalleryItem
           key={activity.id}
           activity={activity}
+          showCaption={showCaption}
         />
       ))}
     </div>
