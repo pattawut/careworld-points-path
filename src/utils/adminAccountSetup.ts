@@ -6,18 +6,18 @@ export const createAdminAccount = async () => {
   try {
     console.log("Checking for admin account...");
     
-    // Check if admin user exists
-    const { data: existingUsers, error: userCheckError } = await supabase
-      .from('user_roles')
-      .select('user_id')
+    // Check if admin user exists by checking profiles table
+    const { data: existingAdmins, error: adminCheckError } = await supabase
+      .from('profiles')
+      .select('id')
       .eq('role', 'admin');
       
-    if (userCheckError) {
-      console.error('Error checking admin roles:', userCheckError);
+    if (adminCheckError) {
+      console.error('Error checking admin roles:', adminCheckError);
       return;
     }
     
-    if (!existingUsers || existingUsers.length === 0) {
+    if (!existingAdmins || existingAdmins.length === 0) {
       console.log('No admin found, creating default admin account');
       
       // Check if the admin email already exists as a user
@@ -54,20 +54,18 @@ export const createAdminAccount = async () => {
           return;
         }
         
-        // If admin user was created, create role
+        // If admin user was created, update role in profiles
         if (signUpData?.user) {
-          console.log('Admin user created, creating admin role for:', signUpData.user.id);
+          console.log('Admin user created, updating role for:', signUpData.user.id);
           
-          // Create admin role
+          // Update role in profiles table
           const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: signUpData.user.id,
-              role: 'admin'
-            });
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', signUpData.user.id);
             
           if (roleError) {
-            console.error('Error creating admin role:', roleError);
+            console.error('Error setting admin role:', roleError);
             return;
           }
           
@@ -80,30 +78,27 @@ export const createAdminAccount = async () => {
         // User exists but might not have admin role
         console.log('Admin user exists, checking for admin role');
         
-        // Check if the user has the admin role
-        const { data: hasAdminRole, error: roleCheckError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', signInCheck.user.id)
-          .eq('role', 'admin')
+        // Check if the user has the admin role in profiles
+        const { data: userProfile, error: profileCheckError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', signInCheck.user.id)
           .maybeSingle();
           
-        if (roleCheckError) {
-          console.error('Error checking admin role:', roleCheckError);
+        if (profileCheckError) {
+          console.error('Error checking admin role:', profileCheckError);
           return;
         }
         
         // If the user doesn't have the admin role, add it
-        if (!hasAdminRole) {
-          const { error: roleInsertError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: signInCheck.user.id,
-              role: 'admin'
-            });
+        if (!userProfile || userProfile.role !== 'admin') {
+          const { error: roleUpdateError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', signInCheck.user.id);
             
-          if (roleInsertError) {
-            console.error('Error adding admin role:', roleInsertError);
+          if (roleUpdateError) {
+            console.error('Error updating admin role:', roleUpdateError);
             return;
           }
           

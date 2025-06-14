@@ -30,7 +30,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // ดึงข้อมูลผู้ใช้จาก profiles
+      // ดึงข้อมูลผู้ใช้จาก profiles รวมถึง role
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,22 +44,6 @@ export function AdminUsers() {
         return;
       }
       
-      // ดึงข้อมูล admin จาก user_roles
-      const { data: rolesData, error: rolesError } = await (supabase as any)
-        .from('user_roles')
-        .select('user_id, role')
-        .eq('role', 'admin');
-        
-      if (rolesError) throw rolesError;
-      
-      // สร้าง map ของ admin users
-      const adminMap: Record<string, boolean> = {};
-      if (rolesData) {
-        rolesData.forEach((role: any) => {
-          adminMap[role.user_id] = true;
-        });
-      }
-      
       // ดึงข้อมูลอีเมลจาก auth.users (ต้องใช้ admin policy ใน database)
       const { data: userData, error: userError } = await (supabase as any).auth.admin.listUsers();
       
@@ -70,10 +54,10 @@ export function AdminUsers() {
         });
       }
       
-      // รวมข้อมูลจาก profiles และ admin status
+      // รวมข้อมูลจาก profiles และอีเมล
       const enhancedProfiles: UserProfile[] = profilesData.map(profile => ({
         ...profile,
-        is_admin: !!adminMap[profile.id],
+        is_admin: profile.role === 'admin',
         email: emailMap[profile.id]
       }));
       
@@ -94,46 +78,27 @@ export function AdminUsers() {
   // เปลี่ยนสถานะ admin
   const toggleAdminStatus = async (user: UserProfile) => {
     try {
-      if (user.is_admin) {
-        // ถอดบทบาท admin
-        const { error } = await (supabase as any)
-          .from('user_roles')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
+      const newRole = user.is_admin ? 'user' : 'admin';
+      
+      // อัปเดต role ในตาราง profiles
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', user.id);
           
-        if (error) throw error;
-        
-        // อัปเดตสถานะในสเตท
-        setUsers(prev => 
-          prev.map(u => u.id === user.id ? { ...u, is_admin: false } : u)
-        );
-        
-        toast({
-          title: "สำเร็จ",
-          description: `ถอดสิทธิ์แอดมินจาก ${user.full_name || 'ผู้ใช้'} แล้ว`
-        });
-      } else {
-        // เพิ่มบทบาท admin
-        const { error } = await (supabase as any)
-          .from('user_roles')
-          .insert({
-            user_id: user.id,
-            role: 'admin'
-          });
-          
-        if (error) throw error;
-        
-        // อัปเดตสถานะในสเตท
-        setUsers(prev => 
-          prev.map(u => u.id === user.id ? { ...u, is_admin: true } : u)
-        );
-        
-        toast({
-          title: "สำเร็จ",
-          description: `กำหนดสิทธิ์แอดมินให้ ${user.full_name || 'ผู้ใช้'} แล้ว`
-        });
-      }
+      if (error) throw error;
+      
+      // อัปเดตสถานะในสเตท
+      setUsers(prev => 
+        prev.map(u => u.id === user.id ? { ...u, is_admin: newRole === 'admin', role: newRole } : u)
+      );
+      
+      toast({
+        title: "สำเร็จ",
+        description: newRole === 'admin' 
+          ? `กำหนดสิทธิ์แอดมินให้ ${user.full_name || 'ผู้ใช้'} แล้ว`
+          : `ถอดสิทธิ์แอดมินจาก ${user.full_name || 'ผู้ใช้'} แล้ว`
+      });
     } catch (error) {
       console.error('Error toggling admin status:', error);
       toast({

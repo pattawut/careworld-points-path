@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
@@ -30,16 +29,16 @@ const AdminDashboard = () => {
       }
       
       try {
+        // เช็คจาก profiles table
         const { data, error } = await supabase
-          .from('user_roles')
+          .from('profiles')
           .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
+          .eq('id', user.id)
           .maybeSingle();
           
         if (error) throw error;
         
-        setIsAdmin(!!data);
+        setIsAdmin(data?.role === 'admin');
       } catch (error) {
         console.error('Error checking admin status:', error);
         toast({
@@ -55,18 +54,16 @@ const AdminDashboard = () => {
     checkAdminStatus();
   }, [user, toast]);
   
-  // สร้างบทบาท admin สำหรับผู้ใช้ปัจจุบัน (เฉพาะผู้ใช้แรก)
+  // สร้างบทบาท admin สำหรับผู้ใช้ปัจจุบัน
   const makeCurrentUserAdmin = async () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          role: 'admin'
-        })
-        .select();
+      // อัปเดต role ในตาราง profiles
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', user.id);
         
       if (error) throw error;
       

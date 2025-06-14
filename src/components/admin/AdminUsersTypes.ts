@@ -5,6 +5,7 @@ export type UserProfile = {
   avatar_url: string | null;
   eco_points: number;
   created_at: string;
+  role?: string | null;
   is_admin: boolean;
   email?: string;
 };

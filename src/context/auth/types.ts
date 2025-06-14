@@ -6,6 +6,7 @@ export type Profile = {
   full_name: string | null;
   avatar_url: string | null;
   eco_points: number;
+  role?: string | null;
 };
 
 export type AuthContextType = {

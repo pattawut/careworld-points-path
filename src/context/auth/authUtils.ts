@@ -30,21 +30,20 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
 
 export const createAdminRole = async (userId: string): Promise<boolean> => {
   try {
+    // Update role in profiles table instead of user_roles
     const { error } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: 'admin'
-      });
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', userId);
 
     if (error) {
-      console.error('Error creating admin role:', error);
+      console.error('Error setting admin role:', error);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Error creating admin role:', error);
+    console.error('Error setting admin role:', error);
     return false;
   }
 };
