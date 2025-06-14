@@ -9,30 +9,31 @@ import { ActivityItem } from './activity/ActivityItem';
 import { ActivityEmptyState } from './activity/ActivityEmptyState';
 import { ActivityLoading } from './activity/ActivityLoading';
 
-interface Activity {
+interface Campaign {
   id: string;
-  activity_type: string;
-  description: string;
-  image_url: string;
+  activity_type: string | null;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
   created_at: string;
   points: number;
 }
 
 export const ActivityList = () => {
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const fetchUserActivities = async () => {
+  const fetchUserCampaigns = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('activities')
+        .from('campaigns')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -41,9 +42,9 @@ export const ActivityList = () => {
         throw error;
       }
 
-      setActivities(data as Activity[]);
+      setCampaigns(data as Campaign[]);
     } catch (error: any) {
-      console.error('Error fetching activities:', error);
+      console.error('Error fetching campaigns:', error);
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
@@ -56,7 +57,7 @@ export const ActivityList = () => {
 
   useEffect(() => {
     if (user) {
-      fetchUserActivities();
+      fetchUserCampaigns();
     }
   }, [user]);
 
@@ -66,40 +67,40 @@ export const ActivityList = () => {
     try {
       setDeletingId(id);
       
-      // First, get the activity to find the image path
-      const { data: activity, error: fetchError } = await supabase
-        .from('activities')
+      // First, get the campaign to find the image path
+      const { data: campaign, error: fetchError } = await supabase
+        .from('campaigns')
         .select('*')
         .eq('id', id)
         .single();
         
       if (fetchError) throw fetchError;
       
-      // Delete the activity from the database
+      // Delete the campaign from the database
       const { error: deleteError } = await supabase
-        .from('activities')
+        .from('campaigns')
         .delete()
         .eq('id', id);
         
       if (deleteError) throw deleteError;
       
       // If there was an image, delete it from storage
-      if (activity.image_url) {
-        const filePath = `${user.id}/${activity.image_url.split('/').pop()}`;
+      if (campaign.image_url) {
+        const filePath = `${user.id}/${campaign.image_url.split('/').pop()}`;
         await supabase.storage
           .from('activity-images')
           .remove([filePath]);
       }
       
       // Update local state
-      setActivities(activities.filter(activity => activity.id !== id));
+      setCampaigns(campaigns.filter(campaign => campaign.id !== id));
       
       toast({
         title: "ลบกิจกรรมสำเร็จ",
         description: "กิจกรรมถูกลบออกจากระบบเรียบร้อยแล้ว",
       });
     } catch (error: any) {
-      console.error('Error deleting activity:', error);
+      console.error('Error deleting campaign:', error);
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
@@ -110,23 +111,28 @@ export const ActivityList = () => {
     }
   };
 
-  if (editingActivity) {
+  if (editingCampaign) {
     return (
       <div>
         <Button 
           variant="outline" 
-          onClick={() => setEditingActivity(null)}
+          onClick={() => setEditingCampaign(null)}
           className="mb-4"
         >
           กลับไปยังรายการกิจกรรม
         </Button>
         <ActivityForm 
-          activity={editingActivity}
-          onSuccess={() => {
-            setEditingActivity(null);
-            fetchUserActivities();
+          activity={{
+            id: editingCampaign.id,
+            activity_type: editingCampaign.activity_type || 'general',
+            description: editingCampaign.description || editingCampaign.title || '',
+            image_url: editingCampaign.image_url || ''
           }}
-          onCancel={() => setEditingActivity(null)}
+          onSuccess={() => {
+            setEditingCampaign(null);
+            fetchUserCampaigns();
+          }}
+          onCancel={() => setEditingCampaign(null)}
         />
       </div>
     );
@@ -136,19 +142,26 @@ export const ActivityList = () => {
     return <ActivityLoading />;
   }
 
-  if (activities.length === 0) {
+  if (campaigns.length === 0) {
     return <ActivityEmptyState />;
   }
 
   return (
     <div className="space-y-4">
-      {activities.map((activity) => (
+      {campaigns.map((campaign) => (
         <ActivityItem 
-          key={activity.id}
-          activity={activity}
-          onEdit={() => setEditingActivity(activity)}
-          onDelete={() => handleDelete(activity.id)}
-          isDeleting={deletingId === activity.id}
+          key={campaign.id}
+          activity={{
+            id: campaign.id,
+            activity_type: campaign.activity_type || 'general',
+            description: campaign.description || campaign.title || '',
+            image_url: campaign.image_url || '',
+            created_at: campaign.created_at,
+            points: campaign.points
+          }}
+          onEdit={() => setEditingCampaign(campaign)}
+          onDelete={() => handleDelete(campaign.id)}
+          isDeleting={deletingId === campaign.id}
         />
       ))}
     </div>

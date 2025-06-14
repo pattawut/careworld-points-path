@@ -92,14 +92,15 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
       }
       
       if (isEditing) {
-        // Update existing activity
+        // Update existing campaign
         const { error } = await supabase
-          .from('activities')
+          .from('campaigns')
           .update({
             activity_type: activityType,
             description,
             image_url: imageUrl,
             updated_at: new Date().toISOString(),
+            status: 'archived'
           })
           .eq('id', activity.id);
           
@@ -110,15 +111,17 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           description: "ข้อมูลกิจกรรมของคุณถูกบันทึกเรียบร้อย",
         });
       } else {
-        // Create new activity
+        // Create new campaign (user activity)
         const { error } = await supabase
-          .from('activities')
+          .from('campaigns')
           .insert([{
             user_id: user.id,
             activity_type: activityType,
             description,
             image_url: imageUrl,
-            points: 1, // Default points
+            points: 1,
+            status: 'archived',
+            title: activityType
           }]);
           
         if (error) throw error;

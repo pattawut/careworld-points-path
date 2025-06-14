@@ -9,43 +9,11 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      activities: {
-        Row: {
-          activity_type: string
-          created_at: string | null
-          description: string | null
-          id: string
-          image_url: string | null
-          points: number | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          activity_type: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          points?: number | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          points?: number | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       campaigns: {
         Row: {
+          activity_type: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           end_date: string | null
           id: string
@@ -53,12 +21,14 @@ export type Database = {
           points: number
           start_date: string | null
           status: string
-          title: string
+          title: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
+          activity_type?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -66,12 +36,14 @@ export type Database = {
           points?: number
           start_date?: string | null
           status?: string
-          title: string
+          title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
+          activity_type?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -79,8 +51,9 @@ export type Database = {
           points?: number
           start_date?: string | null
           status?: string
-          title?: string
+          title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -89,7 +62,6 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           eco_points: number | null
-          email: string | null
           full_name: string | null
           id: string
           role: string | null
@@ -99,7 +71,6 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           eco_points?: number | null
-          email?: string | null
           full_name?: string | null
           id: string
           role?: string | null
@@ -109,7 +80,6 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           eco_points?: number | null
-          email?: string | null
           full_name?: string | null
           id?: string
           role?: string | null

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 type Campaign = {
   id: string;
-  title: string;
+  title: string | null;
   description: string | null;
   image_url: string | null;
   points: number;
@@ -29,6 +28,7 @@ export const Campaigns = () => {
           .from('campaigns')
           .select('*')
           .in('status', ['active', 'promoted', 'coming_soon'])
+          .is('user_id', null)
           .limit(4)
           .order('created_at', { ascending: false });
           
@@ -139,7 +139,7 @@ export const Campaigns = () => {
               <div className="aspect-video relative">
                 <img 
                   src={campaign.image_url || "https://placehold.co/500x300/e5f7f0/2c7873?text=Campaign+Image"} 
-                  alt={campaign.title}
+                  alt={campaign.title || 'Campaign'}
                   className="object-cover w-full h-full"
                 />
                 <div className="absolute top-3 right-3">
@@ -149,7 +149,7 @@ export const Campaigns = () => {
                 </div>
               </div>
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title}</h3>
+                <h3 className="text-xl font-semibold text-eco-blue mb-2">{campaign.title || 'แคมเปญ'}</h3>
                 <p className="text-gray-600 mb-4">
                   {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
                 </p>

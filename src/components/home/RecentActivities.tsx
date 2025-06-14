@@ -15,7 +15,7 @@ export const RecentActivities = () => {
           </p>
         </div>
         
-        <ActivityGallery showCaption={true} />
+        <ActivityGallery showCaption={true} showUserActivities={true} />
         
         <div className="text-center mt-10">
           <Button variant="outline" asChild className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">

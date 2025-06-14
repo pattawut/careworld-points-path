@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Award, ShoppingBag, RecycleIcon, Calendar, Users, Leaf } from 'lucide-react';
+import { Award, ShoppingBag, RecycleIcon, Calendar, Users, Leaf, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityForm } from '@/components/ActivityForm';
 import { ActivityList } from '@/components/ActivityList';
@@ -173,6 +173,9 @@ const Dashboard = () => {
     setActiveTab('myActivities');
     setRefreshTrigger(prev => prev + 1);
   };
+
+  // Check if user is admin
+  const isAdmin = profile?.role === 'admin';
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -184,7 +187,15 @@ const Dashboard = () => {
               <h1 className="text-2xl md:text-3xl font-bold text-eco-blue">สวัสดี, {profile?.full_name || 'สมาชิก'}</h1>
               <p className="text-gray-600">ยินดีต้อนรับกลับมา! ติดตามความคืบหน้าของคุณได้ที่นี่</p>
             </div>
-            <div className="mt-4 md:mt-0">
+            <div className="mt-4 md:mt-0 flex gap-2">
+              {isAdmin && (
+                <Button asChild variant="outline" className="border-eco-blue text-eco-blue hover:bg-eco-blue hover:text-white">
+                  <Link to="/admin">
+                    <Settings className="h-4 w-4 mr-2" />
+                    จัดการระบบ
+                  </Link>
+                </Button>
+              )}
               <Button asChild className="bg-eco-gradient hover:opacity-90">
                 <Link to="/activities">ร่วมกิจกรรมเพิ่มเติม</Link>
               </Button>
