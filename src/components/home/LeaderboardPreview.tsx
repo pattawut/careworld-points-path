@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getAvatarUrl } from '@/utils/avatarUtils';
 
 type UserProfile = {
   id: string;
@@ -130,7 +130,7 @@ export const LeaderboardPreview = () => {
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24 mb-4">
                   <img 
-                    src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
+                    src={getAvatarUrl(user.avatar_url, user.id)} 
                     alt={user.full_name} 
                     className="rounded-full object-cover w-full h-full border-4 border-eco-teal"
                   />

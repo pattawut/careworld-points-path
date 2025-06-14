@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { Footer } from '@/components/Footer';
 import { Award, Users, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { getAvatarUrl } from '@/utils/avatarUtils';
 
 type LeaderboardUser = {
   id: string;
@@ -193,7 +193,7 @@ const Leaderboard = () => {
               <div className="flex flex-col items-center">
                 <div className="relative -mt-16 mb-3">
                   <img 
-                    src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
+                    src={getAvatarUrl(user.avatar_url, user.id)} 
                     alt={user.full_name} 
                     className="rounded-full object-cover w-24 h-24 border-4 border-white shadow-lg"
                   />
@@ -263,7 +263,7 @@ const Leaderboard = () => {
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <img 
-                        src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
+                        src={getAvatarUrl(user.avatar_url, user.id)} 
                         alt={user.full_name} 
                         className="rounded-full w-10 h-10 object-cover"
                       />

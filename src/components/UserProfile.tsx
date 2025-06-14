@@ -30,6 +30,7 @@ export function UserProfile() {
               fullName={profile.full_name} 
               email={user.email} 
               avatarUrl={profile.avatar_url}
+              userId={user.id}
             />
           </CardHeader>
           
