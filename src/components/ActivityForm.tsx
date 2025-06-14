@@ -41,6 +41,50 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
       setPreview(activity?.image_url || null);
     }
   };
+
+  const copyTagsFromSelectedCampaign = async (newCampaignId: string, selectedActivityType: string) => {
+    try {
+      // Find the source campaign that matches the selected activity type
+      const { data: sourceCampaign, error: campaignError } = await supabase
+        .from('campaigns')
+        .select(`
+          id,
+          campaign_tag_relations (
+            tag_id
+          )
+        `)
+        .eq('activity_type', selectedActivityType)
+        .eq('status', 'active')
+        .is('user_id', null)
+        .limit(1)
+        .single();
+
+      if (campaignError || !sourceCampaign) {
+        console.log('No source campaign found for activity type:', selectedActivityType);
+        return;
+      }
+
+      // Copy tags if they exist
+      if (sourceCampaign.campaign_tag_relations && sourceCampaign.campaign_tag_relations.length > 0) {
+        const tagRelations = sourceCampaign.campaign_tag_relations.map((relation: any) => ({
+          campaign_id: newCampaignId,
+          tag_id: relation.tag_id
+        }));
+
+        const { error: tagError } = await supabase
+          .from('campaign_tag_relations')
+          .insert(tagRelations);
+
+        if (tagError) {
+          console.error('Error copying tags:', tagError);
+        } else {
+          console.log('Tags copied successfully for activity');
+        }
+      }
+    } catch (error) {
+      console.error('Error in copyTagsFromSelectedCampaign:', error);
+    }
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +156,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
         });
       } else {
         // Create new campaign (user activity)
-        const { error } = await supabase
+        const { data: newCampaign, error } = await supabase
           .from('campaigns')
           .insert([{
             user_id: user.id,
@@ -122,9 +166,16 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
             points: 1,
             status: 'archived',
             title: activityType
-          }]);
+          }])
+          .select('id')
+          .single();
           
         if (error) throw error;
+
+        // Copy tags from the selected campaign type
+        if (newCampaign) {
+          await copyTagsFromSelectedCampaign(newCampaign.id, activityType);
+        }
         
         toast({
           title: "อัปโหลดกิจกรรมสำเร็จ",

@@ -178,7 +178,7 @@ const CampaignDetail = () => {
         .getPublicUrl(uploadData.path);
 
       // Create user activity record
-      const { error: insertError } = await supabase
+      const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
         .insert({
           title: `${campaign.title} - กิจกรรมของ ${user.email}`,
@@ -188,9 +188,28 @@ const CampaignDetail = () => {
           user_id: user.id,
           activity_type: campaign.activity_type,
           status: 'completed'
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      // Copy tags from original campaign to user's activity
+      if (campaign.tags && campaign.tags.length > 0 && newCampaign) {
+        const tagRelations = campaign.tags.map(tag => ({
+          campaign_id: newCampaign.id,
+          tag_id: tag.id
+        }));
+
+        const { error: tagError } = await supabase
+          .from('campaign_tag_relations')
+          .insert(tagRelations);
+
+        if (tagError) {
+          console.error('Error copying tags:', tagError);
+          // Don't throw error as the main activity was created successfully
+        }
+      }
 
       toast({
         title: "เข้าร่วมสำเร็จ!",
