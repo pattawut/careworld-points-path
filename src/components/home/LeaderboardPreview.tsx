@@ -11,7 +11,7 @@ type UserProfile = {
   full_name: string;
   avatar_url: string | null;
   eco_points: number;
-  activities_count?: number;
+  activities_count: number;
 };
 
 export const LeaderboardPreview = () => {
@@ -49,6 +49,8 @@ export const LeaderboardPreview = () => {
               
             return {
               ...user,
+              full_name: user.full_name || 'ไม่ระบุชื่อ',
+              eco_points: user.eco_points || 0,
               activities_count: count || 0
             };
           })
@@ -64,34 +66,48 @@ export const LeaderboardPreview = () => {
     
     fetchTopUsers();
   }, []);
-  
-  // Default mock data in case of no users or loading state
-  const defaultUsers = [
-    {
-      id: '1',
-      full_name: 'สมชาย ใจดี',
-      eco_points: 530,
-      activities_count: 42,
-      avatar_url: 'https://i.pravatar.cc/100?img=1'
-    },
-    {
-      id: '2',
-      full_name: 'สมหญิง รักโลก',
-      eco_points: 480,
-      activities_count: 38,
-      avatar_url: 'https://i.pravatar.cc/100?img=5'
-    },
-    {
-      id: '3',
-      full_name: 'ภาสกร นิยมไทย',
-      eco_points: 450,
-      activities_count: 36,
-      avatar_url: 'https://i.pravatar.cc/100?img=3'
-    }
-  ];
 
-  // Use real data if available, otherwise use mock data
-  const displayUsers = topUsers.length > 0 ? topUsers : defaultUsers;
+  if (loading) {
+    return (
+      <section className="py-20 bg-white">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-eco-blue mb-3">อันดับผู้นำ</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              สมาชิกที่มีคะแนนสูงสุดจากการร่วมกิจกรรมต่างๆ ในโครงการ CareWorld รักษ์โลก
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-center h-40">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-eco-teal mx-auto mb-4"></div>
+              <p className="text-gray-600">กำลังโหลดข้อมูลอันดับ...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (topUsers.length === 0) {
+    return (
+      <section className="py-20 bg-white">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-eco-blue mb-3">อันดับผู้นำ</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              สมาชิกที่มีคะแนนสูงสุดจากการร่วมกิจกรรมต่างๆ ในโครงการ CareWorld รักษ์โลก
+            </p>
+          </div>
+          
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">ยังไม่มีข้อมูลอันดับ</p>
+            <p className="text-sm text-gray-400">เป็นคนแรกที่เข้าร่วมกิจกรรมและสะสมแต้ม!</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-white">
@@ -104,7 +120,7 @@ export const LeaderboardPreview = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-          {displayUsers.map((user, index) => (
+          {topUsers.map((user, index) => (
             <Card key={user.id} className="relative overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow p-6 text-center">
               <div className="absolute top-3 left-3">
                 <div className="flex items-center justify-center h-8 w-8 rounded-full bg-eco-gradient text-white font-bold">
@@ -114,7 +130,7 @@ export const LeaderboardPreview = () => {
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24 mb-4">
                   <img 
-                    src={user.avatar_url || `https://i.pravatar.cc/100?img=${index + 1}`} 
+                    src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
                     alt={user.full_name} 
                     className="rounded-full object-cover w-full h-full border-4 border-eco-teal"
                   />
@@ -125,7 +141,7 @@ export const LeaderboardPreview = () => {
                   )}
                 </div>
                 <h3 className="text-xl font-semibold text-eco-blue mb-1">{user.full_name}</h3>
-                <p className="text-gray-600 text-sm mb-4">กิจกรรมที่ร่วม: {user.activities_count || 0}</p>
+                <p className="text-gray-600 text-sm mb-4">กิจกรรมที่ร่วม: {user.activities_count}</p>
                 <div className="bg-eco-light rounded-full px-4 py-2 font-semibold text-eco-blue">
                   {user.eco_points} แต้ม
                 </div>

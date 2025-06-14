@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,247 +8,179 @@ import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Award, Users, Calendar } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+
+type LeaderboardUser = {
+  id: string;
+  full_name: string;
+  eco_points: number;
+  avatar_url: string | null;
+  activities_count: number;
+  latest_activity?: {
+    title: string;
+    image_url: string;
+    created_at: string;
+  };
+};
 
 const Leaderboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const allTimeUsers = [
-    {
-      id: 1,
-      name: 'สมชาย ใจดี',
-      points: 748,
-      activities: 86,
-      avatar: 'https://i.pravatar.cc/100?img=1',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 2,
-      name: 'สมหญิง รักโลก',
-      points: 712,
-      activities: 79,
-      avatar: 'https://i.pravatar.cc/100?img=5',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 3,
-      name: 'ภาสกร นิยมไทย',
-      points: 690,
-      activities: 74,
-      avatar: 'https://i.pravatar.cc/100?img=3',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 4,
-      name: 'วันชัย สมศักดิ์',
-      points: 654,
-      activities: 68,
-      avatar: 'https://i.pravatar.cc/100?img=12',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1558640476-437a5e791cb2?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 5,
-      name: 'มนัสนันท์ พัฒนา',
-      points: 612,
-      activities: 65,
-      avatar: 'https://i.pravatar.cc/100?img=9',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 6,
-      name: 'ธนาพร ดาวเด่น',
-      points: 598,
-      activities: 62,
-      avatar: 'https://i.pravatar.cc/100?img=10',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 7,
-      name: 'กิตติภพ วิเศษ',
-      points: 573,
-      activities: 59,
-      avatar: 'https://i.pravatar.cc/100?img=19',
-      lastActivity: 'กิจกรรม Wake Up Waste',
-      lastImage: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 8,
-      name: 'สุชาดา เรืองเดช',
-      points: 548,
-      activities: 54,
-      avatar: 'https://i.pravatar.cc/100?img=6',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    }
-  ];
-  
-  const monthlyUsers = [
-    {
-      id: 2,
-      name: 'สมหญิง รักโลก',
-      points: 112,
-      activities: 12,
-      avatar: 'https://i.pravatar.cc/100?img=5',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 1,
-      name: 'สมชาย ใจดี',
-      points: 98,
-      activities: 10,
-      avatar: 'https://i.pravatar.cc/100?img=1',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 5,
-      name: 'มนัสนันท์ พัฒนา',
-      points: 92,
-      activities: 9,
-      avatar: 'https://i.pravatar.cc/100?img=9',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 7,
-      name: 'กิตติภพ วิเศษ',
-      points: 85,
-      activities: 8,
-      avatar: 'https://i.pravatar.cc/100?img=19',
-      lastActivity: 'กิจกรรม Wake Up Waste',
-      lastImage: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 3,
-      name: 'ภาสกร นิยมไทย',
-      points: 78,
-      activities: 8,
-      avatar: 'https://i.pravatar.cc/100?img=3',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 4,
-      name: 'วันชัย สมศักดิ์',
-      points: 74,
-      activities: 7,
-      avatar: 'https://i.pravatar.cc/100?img=12',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1558640476-437a5e791cb2?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 6,
-      name: 'ธนาพร ดาวเด่น',
-      points: 68,
-      activities: 7,
-      avatar: 'https://i.pravatar.cc/100?img=10',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 8,
-      name: 'สุชาดา เรืองเดช',
-      points: 65,
-      activities: 6,
-      avatar: 'https://i.pravatar.cc/100?img=6',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    }
-  ];
-  
-  const weeklyUsers = [
-    {
-      id: 5,
-      name: 'มนัสนันท์ พัฒนา',
-      points: 42,
-      activities: 4,
-      avatar: 'https://i.pravatar.cc/100?img=9',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 2,
-      name: 'สมหญิง รักโลก',
-      points: 38,
-      activities: 4,
-      avatar: 'https://i.pravatar.cc/100?img=5',
-      lastActivity: 'ใช้ถุงผ้าแทนถุงพลาสติก',
-      lastImage: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 7,
-      name: 'กิตติภพ วิเศษ',
-      points: 35,
-      activities: 3,
-      avatar: 'https://i.pravatar.cc/100?img=19',
-      lastActivity: 'กิจกรรม Wake Up Waste',
-      lastImage: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 1,
-      name: 'สมชาย ใจดี',
-      points: 32,
-      activities: 3,
-      avatar: 'https://i.pravatar.cc/100?img=1',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 3,
-      name: 'ภาสกร นิยมไทย',
-      points: 28,
-      activities: 3,
-      avatar: 'https://i.pravatar.cc/100?img=3',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 6,
-      name: 'ธนาพร ดาวเด่น',
-      points: 25,
-      activities: 2,
-      avatar: 'https://i.pravatar.cc/100?img=10',
-      lastActivity: 'ใช้แก้วส่วนตัว',
-      lastImage: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 4,
-      name: 'วันชัย สมศักดิ์',
-      points: 21,
-      activities: 2,
-      avatar: 'https://i.pravatar.cc/100?img=12',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1558640476-437a5e791cb2?auto=format&fit=crop&w=100&q=80'
-    },
-    {
-      id: 8,
-      name: 'สุชาดา เรืองเดช',
-      points: 18,
-      activities: 2,
-      avatar: 'https://i.pravatar.cc/100?img=6',
-      lastActivity: 'คัดแยกขยะรีไซเคิล',
-      lastImage: 'https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=100&q=80'
-    }
-  ];
-  
-  const filterUsers = (users: typeof allTimeUsers) => {
+  const [allTimeUsers, setAllTimeUsers] = useState<LeaderboardUser[]>([]);
+  const [monthlyUsers, setMonthlyUsers] = useState<LeaderboardUser[]>([]);
+  const [weeklyUsers, setWeeklyUsers] = useState<LeaderboardUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all users with their eco_points
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, eco_points, avatar_url')
+          .order('eco_points', { ascending: false });
+
+        if (usersError) {
+          throw usersError;
+        }
+
+        if (!users || users.length === 0) {
+          setAllTimeUsers([]);
+          setMonthlyUsers([]);
+          setWeeklyUsers([]);
+          return;
+        }
+
+        // Get activity counts and latest activities for each user
+        const usersWithActivities = await Promise.all(
+          users.map(async (user) => {
+            // Count total activities
+            const { count: totalCount } = await supabase
+              .from('campaigns')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id);
+
+            // Count monthly activities (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { count: monthlyCount } = await supabase
+              .from('campaigns')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id)
+              .gte('created_at', thirtyDaysAgo.toISOString());
+
+            // Count weekly activities (last 7 days)
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const { count: weeklyCount } = await supabase
+              .from('campaigns')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id)
+              .gte('created_at', sevenDaysAgo.toISOString());
+
+            // Get latest activity
+            const { data: latestActivity } = await supabase
+              .from('campaigns')
+              .select('title, image_url, created_at')
+              .eq('user_id', user.id)
+              .not('image_url', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            return {
+              ...user,
+              activities_count: totalCount || 0,
+              monthly_count: monthlyCount || 0,
+              weekly_count: weeklyCount || 0,
+              latest_activity: latestActivity || undefined
+            };
+          })
+        );
+
+        // Sort and set all-time leaderboard
+        const sortedAllTime = usersWithActivities
+          .sort((a, b) => (b.eco_points || 0) - (a.eco_points || 0))
+          .map(user => ({
+            id: user.id,
+            full_name: user.full_name || 'ไม่ระบุชื่อ',
+            eco_points: user.eco_points || 0,
+            avatar_url: user.avatar_url,
+            activities_count: user.activities_count,
+            latest_activity: user.latest_activity
+          }));
+
+        // Calculate monthly points (approximate based on recent activities)
+        const monthlyLeaderboard = usersWithActivities
+          .map(user => ({
+            id: user.id,
+            full_name: user.full_name || 'ไม่ระบุชื่อ',
+            eco_points: user.monthly_count * 10, // Approximate monthly points
+            avatar_url: user.avatar_url,
+            activities_count: user.monthly_count,
+            latest_activity: user.latest_activity
+          }))
+          .filter(user => user.eco_points > 0)
+          .sort((a, b) => b.eco_points - a.eco_points);
+
+        // Calculate weekly points (approximate based on recent activities)
+        const weeklyLeaderboard = usersWithActivities
+          .map(user => ({
+            id: user.id,
+            full_name: user.full_name || 'ไม่ระบุชื่อ',
+            eco_points: user.weekly_count * 10, // Approximate weekly points
+            avatar_url: user.avatar_url,
+            activities_count: user.weekly_count,
+            latest_activity: user.latest_activity
+          }))
+          .filter(user => user.eco_points > 0)
+          .sort((a, b) => b.eco_points - a.eco_points);
+
+        setAllTimeUsers(sortedAllTime);
+        setMonthlyUsers(monthlyLeaderboard);
+        setWeeklyUsers(weeklyLeaderboard);
+
+      } catch (error) {
+        console.error('Error fetching leaderboard data:', error);
+        toast({
+          variant: "destructive",
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถโหลดข้อมูลอันดับได้",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboardData();
+  }, [toast]);
+
+  const filterUsers = (users: LeaderboardUser[]) => {
     if (!searchTerm) return users;
-    
     return users.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+      user.full_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
-  
-  const renderTopThree = (users: typeof allTimeUsers) => {
+
+  const renderTopThree = (users: LeaderboardUser[]) => {
+    const filteredUsers = filterUsers(users);
+    
+    if (filteredUsers.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-gray-500">ยังไม่มีข้อมูลอันดับ</p>
+        </div>
+      );
+    }
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {users.slice(0, 3).map((user, index) => (
+        {filteredUsers.slice(0, 3).map((user, index) => (
           <Card key={user.id} className={`border-none shadow-lg overflow-hidden ${index === 0 ? 'md:order-2 ring-2 ring-yellow-400' : index === 1 ? 'md:order-1' : 'md:order-3'}`}>
             <div className="relative h-32 bg-eco-gradient">
               <div className="absolute top-3 left-3">
@@ -260,8 +193,8 @@ const Leaderboard = () => {
               <div className="flex flex-col items-center">
                 <div className="relative -mt-16 mb-3">
                   <img 
-                    src={user.avatar} 
-                    alt={user.name} 
+                    src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
+                    alt={user.full_name} 
                     className="rounded-full object-cover w-24 h-24 border-4 border-white shadow-lg"
                   />
                   {index === 0 && (
@@ -270,29 +203,31 @@ const Leaderboard = () => {
                     </div>
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-eco-blue text-center">{user.name}</h3>
+                <h3 className="text-lg font-semibold text-eco-blue text-center">{user.full_name}</h3>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                   <Calendar className="h-4 w-4" />
-                  <span>{user.activities} กิจกรรม</span>
+                  <span>{user.activities_count} กิจกรรม</span>
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="bg-eco-light rounded-full px-4 py-1 font-semibold text-eco-blue">
-                    {user.points} แต้ม
+                    {user.eco_points} แต้ม
                   </div>
                 </div>
-                <div className="w-full">
-                  <div className="text-sm text-gray-500 mb-2">กิจกรรมล่าสุด</div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-md overflow-hidden">
-                      <img 
-                        src={user.lastImage} 
-                        alt={user.lastActivity} 
-                        className="h-full w-full object-cover"
-                      />
+                {user.latest_activity && (
+                  <div className="w-full">
+                    <div className="text-sm text-gray-500 mb-2">กิจกรรมล่าสุด</div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-md overflow-hidden">
+                        <img 
+                          src={user.latest_activity.image_url} 
+                          alt={user.latest_activity.title} 
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <p className="text-sm text-gray-700">{user.latest_activity.title}</p>
                     </div>
-                    <p className="text-sm text-gray-700">{user.lastActivity}</p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </Card>
@@ -300,8 +235,8 @@ const Leaderboard = () => {
       </div>
     );
   };
-  
-  const renderLeaderboardTable = (users: typeof allTimeUsers) => {
+
+  const renderLeaderboardTable = (users: LeaderboardUser[]) => {
     const filteredUsers = filterUsers(users);
     
     return (
@@ -328,30 +263,34 @@ const Leaderboard = () => {
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <img 
-                        src={user.avatar} 
-                        alt={user.name} 
+                        src={user.avatar_url || `https://i.pravatar.cc/100?u=${user.id}`} 
+                        alt={user.full_name} 
                         className="rounded-full w-10 h-10 object-cover"
                       />
-                      <span className="font-medium text-eco-blue">{user.name}</span>
+                      <span className="font-medium text-eco-blue">{user.full_name}</span>
                     </div>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-sm overflow-hidden">
-                        <img 
-                          src={user.lastImage} 
-                          alt={user.lastActivity} 
-                          className="h-full w-full object-cover"
-                        />
+                    {user.latest_activity ? (
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-sm overflow-hidden">
+                          <img 
+                            src={user.latest_activity.image_url} 
+                            alt={user.latest_activity.title} 
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <span className="text-gray-700 text-sm">{user.latest_activity.title}</span>
                       </div>
-                      <span className="text-gray-700 text-sm">{user.lastActivity}</span>
-                    </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">ยังไม่มีกิจกรรม</span>
+                    )}
                   </td>
                   <td className="py-4 px-4 text-center text-gray-700">
-                    {user.activities}
+                    {user.activities_count}
                   </td>
                   <td className="py-4 px-4 text-right">
-                    <span className="font-semibold text-eco-blue">{user.points}</span>
+                    <span className="font-semibold text-eco-blue">{user.eco_points}</span>
                   </td>
                 </tr>
               ))
@@ -367,6 +306,25 @@ const Leaderboard = () => {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow py-10 bg-eco-light">
+          <div className="container px-4 md:px-6">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-eco-teal mx-auto mb-4"></div>
+                <p className="text-gray-600">กำลังโหลดข้อมูลอันดับ...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -413,15 +371,15 @@ const Leaderboard = () => {
                 </div>
                 
                 <TabsContent value="all-time">
-                  {renderTopThree(filterUsers(allTimeUsers))}
+                  {renderTopThree(allTimeUsers)}
                 </TabsContent>
                 
                 <TabsContent value="monthly">
-                  {renderTopThree(filterUsers(monthlyUsers))}
+                  {renderTopThree(monthlyUsers)}
                 </TabsContent>
                 
                 <TabsContent value="weekly">
-                  {renderTopThree(filterUsers(weeklyUsers))}
+                  {renderTopThree(weeklyUsers)}
                 </TabsContent>
               </Tabs>
             </CardContent>
