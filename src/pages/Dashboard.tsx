@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,10 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Award, ShoppingBag, RecycleIcon, Calendar, Users, Leaf, Settings } from 'lucide-react';
+import { Award, Calendar, Users, RecycleIcon, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityForm } from '@/components/ActivityForm';
 import { ActivityList } from '@/components/ActivityList';
+import { AvailableCampaigns } from '@/components/dashboard/AvailableCampaigns';
 
 const UserStats = () => {
   const { profile } = useAuth();
@@ -98,61 +98,6 @@ const NextLevel = () => {
         </div>
       </CardContent>
     </Card>
-  );
-};
-
-const AvailableCampaigns = () => {
-  const campaigns = [
-    {
-      id: 1,
-      title: 'ถุงผ้ารักษ์โลก',
-      description: 'ใช้ถุงผ้าแทนถุงพลาสติกเพื่อลดขยะ',
-      points: 1,
-      icon: ShoppingBag,
-      path: '/campaigns/bag'
-    },
-    {
-      id: 2,
-      title: 'แก้วและหลอดรียูส',
-      description: 'ใช้แก้วและหลอดส่วนตัวเพื่อลดพลาสติกแบบใช้ครั้งเดียว',
-      points: 1,
-      icon: RecycleIcon,
-      path: '/campaigns/reuse'
-    },
-    {
-      id: 3,
-      title: 'คัดแยกขยะ',
-      description: 'คัดแยกขยะที่บ้านเพื่อการรีไซเคิลที่มีประสิทธิภาพ',
-      points: 1,
-      icon: Leaf,
-      path: '/campaigns/recycle'
-    }
-  ];
-  
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {campaigns.map((campaign) => (
-        <Card key={campaign.id} className="border-none shadow-md">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-eco-teal/10 flex items-center justify-center">
-                <campaign.icon className="h-5 w-5 text-eco-teal" />
-              </div>
-              <CardTitle className="text-lg">{campaign.title}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">{campaign.description}</p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-eco-blue">+{campaign.points} คะแนน/ครั้ง</span>
-              <Button asChild variant="outline" className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white">
-                <Link to={campaign.path}>เข้าร่วม</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
   );
 };
 
