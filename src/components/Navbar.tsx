@@ -22,7 +22,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from './ui/badge';
 
 const links = [
+  { name: 'หน้าหลัก', href: '/' },
   { name: 'แคมเปญ', href: '/campaigns' },
+  { name: 'ความรู้', href: '/education' },
+  { name: 'อันดับ', href: '/leaderboard' },
 ];
 
 export function Navbar() {
