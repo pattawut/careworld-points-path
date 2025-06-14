@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -42,8 +41,14 @@ const Education = () => {
 
       if (error) throw error;
 
-      const articleData = data?.filter(tag => tag.type === 'article') || [];
-      const videoData = data?.filter(tag => tag.type === 'video') || [];
+      // Type cast the data to ensure proper typing
+      const typedData = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'article' | 'video'
+      })) as EducationTag[];
+
+      const articleData = typedData.filter(tag => tag.type === 'article');
+      const videoData = typedData.filter(tag => tag.type === 'video');
 
       setArticles(articleData);
       setVideos(videoData);

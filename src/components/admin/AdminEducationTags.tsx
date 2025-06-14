@@ -53,7 +53,14 @@ export const AdminEducationTags = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTags(data || []);
+      
+      // Type cast the data to ensure proper typing
+      const typedData = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'article' | 'video'
+      })) as EducationTag[];
+      
+      setTags(typedData);
     } catch (error) {
       console.error('Error fetching education tags:', error);
       toast({
