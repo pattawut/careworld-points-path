@@ -9,7 +9,7 @@ type PointLog = {
   points: number;
   activity_type: string | null;
   description: string | null;
-  action_type: 'earned' | 'deducted' | 'bonus' | 'penalty';
+  action_type: string; // Changed from union type to string to match database
   created_at: string;
   campaign_id: string | null;
   metadata: any;
