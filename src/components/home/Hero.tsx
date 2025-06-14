@@ -39,8 +39,8 @@ export const Hero = () => {
           </div>
           <div className="hidden lg:flex justify-center">
             <img 
-              src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=500&q=80" 
-              alt="Earth sustainability"
+              src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=500&q=80" 
+              alt="Environmental protection and sustainability"
               className="rounded-lg shadow-2xl max-w-md animate-float"
             />
           </div>
