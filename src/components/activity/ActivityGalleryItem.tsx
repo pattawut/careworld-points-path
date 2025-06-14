@@ -14,6 +14,7 @@ interface ActivityGalleryItemProps {
     activity_type: string;
     created_at: string;
     points: number;
+    title?: string;
     user: {
       full_name: string;
       avatar_url: string | null;
@@ -51,6 +52,10 @@ export const ActivityGalleryItem = ({ activity, showCaption = false }: ActivityG
             <ActivityBadge type={activity.activity_type} />
           </div>
         </div>
+        
+        {activity.title && (
+          <h3 className="font-semibold text-eco-blue mb-2 line-clamp-1">{activity.title}</h3>
+        )}
         
         {showCaption && (
           <p className="text-gray-700 line-clamp-2 mb-2">{activity.description}</p>

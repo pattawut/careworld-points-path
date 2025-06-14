@@ -12,6 +12,7 @@ type ActivityWithUser = {
   activity_type: string;
   created_at: string;
   points: number;
+  title?: string;
   user: {
     full_name: string;
     avatar_url: string;
@@ -46,6 +47,7 @@ export function ActivityGallery({
         .from('campaigns')
         .select(`
           id,
+          title,
           description,
           image_url,
           activity_type,
@@ -100,6 +102,7 @@ export function ActivityGallery({
         // Format the data to match ActivityWithUser type
         const formattedActivities: ActivityWithUser[] = campaignsData.map((campaign: any) => ({
           id: campaign.id,
+          title: campaign.title,
           description: campaign.description || 'กิจกรรมรักษ์โลก',
           image_url: campaign.image_url || '',
           activity_type: campaign.activity_type || 'general',
