@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AdminCampaigns } from '@/components/admin/AdminCampaigns';
 import { AdminUsers } from '@/components/admin/AdminUsers';
+import { AdminTags } from '@/components/admin/AdminTags';
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
@@ -170,6 +171,12 @@ const AdminDashboard = () => {
                 จัดการกิจกรรม
               </TabsTrigger>
               <TabsTrigger 
+                value="tags" 
+                className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
+              >
+                จัดการ Tag
+              </TabsTrigger>
+              <TabsTrigger 
                 value="users" 
                 className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
               >
@@ -179,6 +186,10 @@ const AdminDashboard = () => {
             
             <TabsContent value="campaigns">
               <AdminCampaigns />
+            </TabsContent>
+            
+            <TabsContent value="tags">
+              <AdminTags />
             </TabsContent>
             
             <TabsContent value="users">
