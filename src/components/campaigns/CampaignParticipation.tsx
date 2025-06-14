@@ -103,13 +103,13 @@ export const CampaignParticipation = ({
         .from('campaign-images')
         .getPublicUrl(uploadData.path);
 
-      // Create user activity record
-      const { data: newCampaign, error: insertError } = await supabase
+      // Create user activity record that references the original campaign
+      const { data: newActivity, error: insertError } = await supabase
         .from('campaigns')
         .insert({
-          title: `${campaign.title} - กิจกรรมของ ${user.email}`,
-          description: description,
-          image_url: publicUrl,
+          title: campaign.title, // ใช้ชื่อเดิมของแคมเปญ
+          description: description, // คำอธิบายของ user
+          image_url: publicUrl, // รูปภาพที่ user อัปโหลด
           points: campaign.points,
           user_id: user.id,
           activity_type: campaign.activity_type,
@@ -121,9 +121,9 @@ export const CampaignParticipation = ({
       if (insertError) throw insertError;
 
       // Copy tags from original campaign to user's activity
-      if (campaign.tags && campaign.tags.length > 0 && newCampaign) {
+      if (campaign.tags && campaign.tags.length > 0 && newActivity) {
         const tagRelations = campaign.tags.map(tag => ({
-          campaign_id: newCampaign.id,
+          campaign_id: newActivity.id,
           tag_id: tag.id
         }));
 
@@ -135,6 +135,23 @@ export const CampaignParticipation = ({
           console.error('Error copying tags:', tagError);
           // Don't throw error as the main activity was created successfully
         }
+      }
+
+      // สร้าง point log สำหรับการได้รับคะแนน
+      const { error: pointLogError } = await supabase
+        .from('user_point_logs')
+        .insert({
+          user_id: user.id,
+          campaign_id: newActivity.id,
+          points: campaign.points,
+          activity_type: campaign.activity_type,
+          description: `เข้าร่วมแคมเปญ: ${campaign.title}`,
+          action_type: 'earned'
+        });
+
+      if (pointLogError) {
+        console.error('Error creating point log:', pointLogError);
+        // ไม่ throw error เพื่อให้การสร้างกิจกรรมดำเนินต่อไปได้
       }
 
       toast({
