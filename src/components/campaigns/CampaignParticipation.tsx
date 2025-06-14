@@ -7,7 +7,7 @@ import { ActivityImageUpload } from '@/components/activity/ActivityImageUpload';
 import { Award } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 type Campaign = {
   id: string;
@@ -45,6 +45,7 @@ export const CampaignParticipation = ({
   const [description, setDescription] = useState('');
 
   const handleFileChange = (file: File | null) => {
+    console.log('File selected:', file);
     setSelectedFile(file);
     if (file) {
       const reader = new FileReader();
@@ -58,7 +59,14 @@ export const CampaignParticipation = ({
   };
 
   const handleSubmit = async () => {
-    if (!user || !campaign) {
+    console.log('Starting submission process...');
+    console.log('User:', user);
+    console.log('Campaign:', campaign);
+    console.log('Selected file:', selectedFile);
+    console.log('Description:', description);
+
+    if (!user) {
+      console.error('No user found');
       toast({
         variant: "destructive",
         title: "กรุณาเข้าสู่ระบบ",
@@ -67,7 +75,18 @@ export const CampaignParticipation = ({
       return;
     }
 
+    if (!campaign) {
+      console.error('No campaign found');
+      toast({
+        variant: "destructive",
+        title: "ไม่พบแคมเปญ",
+        description: "กรุณาลองใหม่อีกครั้ง"
+      });
+      return;
+    }
+
     if (!selectedFile) {
+      console.error('No file selected');
       toast({
         variant: "destructive",
         title: "กรุณาเลือกรูปภาพ",
@@ -77,6 +96,7 @@ export const CampaignParticipation = ({
     }
 
     if (!description.trim()) {
+      console.error('No description provided');
       toast({
         variant: "destructive",
         title: "กรุณาใส่คำอธิบาย",
@@ -88,44 +108,69 @@ export const CampaignParticipation = ({
     setSubmitting(true);
 
     try {
+      console.log('Starting file upload...');
+      
       // Upload image to Supabase Storage
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Date.now()}_${user.id}.${fileExt}`;
+      const filePath = `activities/${fileName}`;
+
+      console.log('Uploading file to path:', filePath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('campaign-images')
-        .upload(`activities/${fileName}`, selectedFile);
+        .upload(filePath, selectedFile);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error(`การอัปโหลดรูปภาพล้มเหลว: ${uploadError.message}`);
+      }
+
+      console.log('File uploaded successfully:', uploadData);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('campaign-images')
         .getPublicUrl(uploadData.path);
 
+      console.log('Public URL:', publicUrl);
+
       // Create user activity record (allow multiple participations)
+      const campaignData = {
+        title: `${campaign.title} - กิจกรรมของ ${user.email}`,
+        description: description,
+        image_url: publicUrl,
+        points: campaign.points,
+        user_id: user.id,
+        activity_type: campaign.activity_type,
+        status: 'completed'
+      };
+
+      console.log('Creating campaign with data:', campaignData);
+
       const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
-        .insert({
-          title: `${campaign.title} - กิจกรรมของ ${user.email}`,
-          description: description,
-          image_url: publicUrl,
-          points: campaign.points,
-          user_id: user.id,
-          activity_type: campaign.activity_type,
-          status: 'completed'
-        })
+        .insert(campaignData)
         .select('id')
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error(`การบันทึกกิจกรรมล้มเหลว: ${insertError.message}`);
+      }
+
+      console.log('New campaign created:', newCampaign);
 
       // Copy tags from original campaign to user's activity
       if (campaign.tags && campaign.tags.length > 0 && newCampaign) {
+        console.log('Copying tags:', campaign.tags);
+        
         const tagRelations = campaign.tags.map(tag => ({
           campaign_id: newCampaign.id,
           tag_id: tag.id
         }));
+
+        console.log('Tag relations to insert:', tagRelations);
 
         const { error: tagError } = await supabase
           .from('campaign_tag_relations')
@@ -134,8 +179,12 @@ export const CampaignParticipation = ({
         if (tagError) {
           console.error('Error copying tags:', tagError);
           // Don't throw error as the main activity was created successfully
+        } else {
+          console.log('Tags copied successfully');
         }
       }
+
+      console.log('Activity submission completed successfully');
 
       toast({
         title: "เข้าร่วมสำเร็จ!",
@@ -150,10 +199,16 @@ export const CampaignParticipation = ({
 
     } catch (error) {
       console.error('Error submitting activity:', error);
+      
+      let errorMessage = "ไม่สามารถส่งกิจกรรมได้ กรุณาลองใหม่อีกครั้ง";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถส่งกิจกรรมได้ กรุณาลองใหม่อีกครั้ง"
+        description: errorMessage
       });
     } finally {
       setSubmitting(false);
