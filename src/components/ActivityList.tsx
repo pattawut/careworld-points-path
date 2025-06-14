@@ -41,13 +41,7 @@ export const ActivityList = () => {
         throw error;
       }
 
-      // Filter out any problematic campaigns
-      const validCampaigns = (data as Campaign[]).filter(campaign => 
-        campaign.id !== '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec' &&
-        campaign.id !== '7f74be0e-45b3-4962-a5c6-1cb4575c9f81'
-      );
-
-      setCampaigns(validCampaigns);
+      setCampaigns(data as Campaign[]);
     } catch (error: any) {
       console.error('Error fetching campaigns:', error);
       toast({
@@ -72,17 +66,6 @@ export const ActivityList = () => {
     try {
       setDeletingId(id);
       
-      // Handle problematic campaigns separately
-      if (id === '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec' || id === '7f74be0e-45b3-4962-a5c6-1cb4575c9f81') {
-        // Just remove from local state since they're causing issues
-        setCampaigns(campaigns.filter(campaign => campaign.id !== id));
-        toast({
-          title: "ลบกิจกรรมสำเร็จ",
-          description: "กิจกรรมที่มีปัญหาถูกลบออกจากระบบเรียบร้อยแล้ว",
-        });
-        return;
-      }
-      
       // First, get the campaign to find the image path
       const { data: campaign, error: fetchError } = await supabase
         .from('campaigns')
@@ -91,6 +74,17 @@ export const ActivityList = () => {
         .single();
         
       if (fetchError) throw fetchError;
+      
+      // Delete related point logs first to avoid foreign key constraint issues
+      const { error: pointLogsError } = await supabase
+        .from('user_point_logs')
+        .delete()
+        .eq('campaign_id', id);
+        
+      if (pointLogsError) {
+        console.error('Error deleting point logs:', pointLogsError);
+        // Continue with campaign deletion even if point logs deletion fails
+      }
       
       // Delete the campaign from the database
       const { error: deleteError } = await supabase
@@ -113,7 +107,7 @@ export const ActivityList = () => {
       
       toast({
         title: "ลบกิจกรรมสำเร็จ",
-        description: "กิจกรรมถูกลบออกจากระบบเรียบร้อยแล้ว",
+        description: "กิจกรรมและประวัติคะแนนที่เกี่ยวข้องถูกลบออกจากระบบเรียบร้อยแล้ว",
       });
     } catch (error: any) {
       console.error('Error deleting campaign:', error);

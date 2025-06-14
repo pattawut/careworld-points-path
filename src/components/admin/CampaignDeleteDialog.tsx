@@ -26,16 +26,28 @@ export const CampaignDeleteDialog = ({ open, onOpenChange, campaign, onSuccess }
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // First delete related point logs to avoid foreign key constraint issues
+      const { error: pointLogsError } = await supabase
+        .from('user_point_logs')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (pointLogsError) {
+        console.error('Error deleting point logs:', pointLogsError);
+        // Continue with campaign deletion even if point logs deletion fails
+      }
+
+      // Then delete the campaign
+      const { error: campaignError } = await supabase
         .from('campaigns')
         .delete()
         .eq('id', campaign.id);
 
-      if (error) throw error;
+      if (campaignError) throw campaignError;
 
       toast({
         title: "ลบสำเร็จ",
-        description: "กิจกรรมได้รับการลบแล้ว"
+        description: "กิจกรรมและประวัติคะแนนที่เกี่ยวข้องได้รับการลบแล้ว"
       });
 
       onSuccess();
@@ -58,7 +70,7 @@ export const CampaignDeleteDialog = ({ open, onOpenChange, campaign, onSuccess }
         <DialogHeader>
           <DialogTitle>ลบกิจกรรม</DialogTitle>
           <DialogDescription>
-            คุณแน่ใจหรือไม่ที่จะลบกิจกรรม "{campaign?.title}" การดำเนินการนี้ไม่สามารถยกเลิกได้
+            คุณแน่ใจหรือไม่ที่จะลบกิจกรรม "{campaign?.title}" การดำเนินการนี้จะลบกิจกรรมและประวัติคะแนนที่เกี่ยวข้องทั้งหมด และไม่สามารถยกเลิกได้
           </DialogDescription>
         </DialogHeader>
 
