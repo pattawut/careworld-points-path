@@ -1,48 +1,79 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Recycle, Leaf, TreePine } from 'lucide-react';
 
 export const Hero = () => {
   return (
-    <section className="relative py-20 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-eco-gradient opacity-90 -z-10"></div>
+    <section className="relative py-20 bg-eco-gradient overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-10 left-10 animate-bounce">
+          <Leaf className="h-12 w-12 text-white" />
+        </div>
+        <div className="absolute top-32 right-20 animate-pulse">
+          <TreePine className="h-16 w-16 text-white" />
+        </div>
+        <div className="absolute bottom-20 left-1/4 animate-bounce delay-300">
+          <Recycle className="h-14 w-14 text-white" />
+        </div>
+      </div>
       
-      {/* Pattern overlay */}
-      <div className="absolute inset-0 opacity-10 -z-10 leaf-pattern"></div>
-      
-      <div className="container px-4 md:px-6">
+      <div className="container relative px-4 md:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="flex flex-col justify-center space-y-4">
-            <div className="inline-block">
-              <Badge className="bg-white/20 text-white hover:bg-white/30">
-                โครงการ "Love Global"
-              </Badge>
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white">
-              CareWorld รักษ์โลก <br />
-              <span className="text-eco-light">เพื่อโลกที่ยั่งยืน</span>
+          <div className="text-center lg:text-left text-white">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+              CareWorld
+              <span className="block text-eco-yellow">รักษ์โลก</span>
+              <span className="block text-3xl md:text-4xl">เพื่อโลกที่ยั่งยืน</span>
             </h1>
-            <p className="text-lg text-white/80 max-w-lg">
-              ร่วมสร้างการเปลี่ยนแปลงเพื่อสิ่งแวดล้อม ด้วยการแยกขยะและลดขยะพลาสติก สะสมแต้มแลกของรางวัล และร่วมสร้างโลกที่น่าอยู่ไปด้วยกัน
+            
+            <p className="text-xl md:text-2xl text-eco-light mb-8 leading-relaxed">
+              ร่วมกันสร้างการเปลี่ยนแปลงเพื่อสิ่งแวดล้อม ผ่านกิจกรรมที่สร้างสรรค์และยั่งยืน
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button size="lg" asChild className="bg-white text-eco-teal hover:bg-eco-light">
-                <Link to="/register">เข้าร่วมกับเรา</Link>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Button 
+                size="lg" 
+                className="bg-white text-eco-teal hover:bg-eco-light hover:text-eco-blue transition-all duration-300 shadow-lg"
+              >
+                เริ่มต้นการเปลี่ยนแปลง
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button variant="outline" size="lg" asChild className="bg-transparent text-white border-white hover:bg-white/20">
-                <Link to="/education">เรียนรู้เพิ่มเติม</Link>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-2 border-white text-white hover:bg-white hover:text-eco-teal transition-all duration-300"
+              >
+                เรียนรู้เพิ่มเติม
               </Button>
             </div>
           </div>
-          <div className="hidden lg:flex justify-center">
-            <img 
-              src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=500&q=80" 
-              alt="Environmental protection and sustainability"
-              className="rounded-lg shadow-2xl max-w-md animate-float"
-            />
+          
+          {/* Hero Image */}
+          <div className="relative">
+            <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-eco-teal/20 to-eco-blue/20 backdrop-blur-sm border border-white/20">
+              <img 
+                src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80" 
+                alt="โลกสีเขียวและต้นไม้" 
+                className="w-full h-full object-cover mix-blend-overlay"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-eco-teal/30 to-transparent"></div>
+            </div>
+            
+            {/* Floating stats cards */}
+            <div className="absolute -top-4 -right-4 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-eco-teal">1,000+</div>
+                <div className="text-sm text-gray-600">กิจกรรมเสร็จแล้ว</div>
+              </div>
+            </div>
+            
+            <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-eco-blue">500+</div>
+                <div className="text-sm text-gray-600">สมาชิกใหม่</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

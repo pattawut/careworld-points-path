@@ -117,6 +117,45 @@ export type Database = {
         }
         Relationships: []
       }
+      education_tags: {
+        Row: {
+          color: string | null
+          content: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          type: string
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          color?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          type: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          color?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          type?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

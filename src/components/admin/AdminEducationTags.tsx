@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Edit, Trash2, BookOpen, Youtube, Upload, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EducationTag {
   id: string;
@@ -40,46 +40,31 @@ export const AdminEducationTags = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const { toast } = useToast();
 
-  // Mock data สำหรับตัวอย่าง
-  const mockTags: EducationTag[] = [
-    {
-      id: '1',
-      name: 'การแยกขยะ',
-      description: 'วิธีการแยกขยะอย่างถูกต้องและมีประสิทธิภาพ',
-      type: 'article',
-      color: '#10B981',
-      content: 'เนื้อหาเกี่ยวกับการแยกขยะ...',
-      image_url: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=400&q=80',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      name: 'ลดใช้พลาสติก',
-      description: 'วิธีการลดการใช้พลาสติกในชีวิตประจำวัน',
-      type: 'video',
-      color: '#3B82F6',
-      youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      name: 'รีไซเคิล',
-      description: 'การนำของเหลือใช้มาใช้ประโยชน์ใหม่',
-      type: 'article',
-      color: '#F59E0B',
-      content: 'เนื้อหาเกี่ยวกับการรีไซเคิล...',
-      image_url: 'https://images.unsplash.com/photo-1573167243872-43c6433b9d40?auto=format&fit=crop&w=400&q=80',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
-
   useEffect(() => {
-    // ใช้ mock data แทนการเรียก API จริง
-    setTags(mockTags);
+    fetchTags();
   }, []);
+
+  const fetchTags = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('education_tags')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTags(data || []);
+    } catch (error) {
+      console.error('Error fetching education tags:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลหัวข้อความรู้ได้"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ฟังก์ชันดึง YouTube Video ID จาก URL
   const getYouTubeVideoId = (url: string) => {
@@ -143,27 +128,35 @@ export const AdminEducationTags = () => {
     }
 
     try {
-      const newTag: EducationTag = {
-        id: editingTag?.id || Date.now().toString(),
+      const tagData = {
         name: formData.name,
-        description: formData.description,
+        description: formData.description || null,
         type: formData.type,
         color: formData.color,
-        content: formData.type === 'article' ? formData.content : undefined,
-        youtube_url: formData.type === 'video' ? formData.youtube_url : undefined,
-        image_url: formData.image_url || undefined,
-        created_at: editingTag?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        content: formData.type === 'article' ? formData.content || null : null,
+        youtube_url: formData.type === 'video' ? formData.youtube_url || null : null,
+        image_url: formData.image_url || null,
       };
 
       if (editingTag) {
-        setTags(prev => prev.map(tag => tag.id === editingTag.id ? newTag : tag));
+        const { error } = await supabase
+          .from('education_tags')
+          .update(tagData)
+          .eq('id', editingTag.id);
+
+        if (error) throw error;
+        
         toast({
           title: "สำเร็จ!",
           description: "แก้ไขหัวข้อความรู้เรียบร้อยแล้ว"
         });
       } else {
-        setTags(prev => [...prev, newTag]);
+        const { error } = await supabase
+          .from('education_tags')
+          .insert([tagData]);
+
+        if (error) throw error;
+        
         toast({
           title: "สำเร็จ!",
           description: "เพิ่มหัวข้อความรู้เรียบร้อยแล้ว"
@@ -173,6 +166,7 @@ export const AdminEducationTags = () => {
       setDialogOpen(false);
       setEditingTag(null);
       setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', youtube_url: '', image_url: '' });
+      fetchTags();
     } catch (error) {
       console.error('Error saving education tag:', error);
       toast({
@@ -187,7 +181,7 @@ export const AdminEducationTags = () => {
     setEditingTag(tag);
     setFormData({
       name: tag.name,
-      description: tag.description,
+      description: tag.description || '',
       type: tag.type,
       color: tag.color || '#10B981',
       content: tag.content || '',
@@ -203,11 +197,18 @@ export const AdminEducationTags = () => {
     }
 
     try {
-      setTags(prev => prev.filter(t => t.id !== tag.id));
+      const { error } = await supabase
+        .from('education_tags')
+        .delete()
+        .eq('id', tag.id);
+
+      if (error) throw error;
+      
       toast({
         title: "สำเร็จ!",
         description: "ลบหัวข้อความรู้เรียบร้อยแล้ว"
       });
+      fetchTags();
     } catch (error) {
       console.error('Error deleting education tag:', error);
       toast({
@@ -223,6 +224,22 @@ export const AdminEducationTags = () => {
     setFormData({ name: '', description: '', type: 'article', color: '#10B981', content: '', youtube_url: '', image_url: '' });
     setDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold">จัดการหัวข้อความรู้</h3>
+            <p className="text-sm text-gray-600">สร้าง แก้ไข และจัดการหัวข้อความรู้สำหรับหน้าศูนย์ความรู้</p>
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

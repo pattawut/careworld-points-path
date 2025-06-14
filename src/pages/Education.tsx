@@ -1,85 +1,76 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RecycleIcon, Leaf, TreePine, Droplets, Youtube } from 'lucide-react';
+import { RecycleIcon, Leaf, TreePine, Droplets, Youtube, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+
+interface EducationTag {
+  id: string;
+  name: string;
+  description: string;
+  type: 'article' | 'video';
+  color: string;
+  content?: string;
+  youtube_url?: string;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const Education = () => {
-  const educationCards = [
-    {
-      title: 'การแยกขยะอย่างถูกต้อง',
-      description: 'เรียนรู้วิธีการแยกขยะแต่ละประเภทเพื่อให้เกิดประโยชน์สูงสุด',
-      icon: <RecycleIcon className="h-8 w-8 text-eco-teal" />,
-      content: [
-        'ขยะเปียก: เศษอาหาร ใบไม้ เหลือจากการปรุงอาหาร',
-        'ขยะแห้ง: กระดาษ พลาสติก แก้ว โลหะ',
-        'ขยะอันตราย: ถ่านไฟฉาย หลอดไฟ ยา เคมี',
-        'ขยะรีไซเคิล: ขวดพลาสติก กระป๋อง กระดาษ'
-      ],
-      image: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      title: 'ลดการใช้พลาสติก',
-      description: 'วิธีง่ายๆ ในการลดการใช้พลาสติกในชีวิตประจำวัน',
-      icon: <Leaf className="h-8 w-8 text-eco-teal" />,
-      content: [
-        'ใช้ถุงผ้าแทนถุงพลาสติก',
-        'ใช้แก้วน้ำและหลอดส่วนตัว',
-        'เลือกซื้อสินค้าที่มีบรรจุภัณฑ์น้อย',
-        'นำภาชนะไปซื้ออาหารแทนโฟมหรือถุงพลาสติก'
-      ],
-      image: 'https://images.unsplash.com/photo-1573167243872-43c6433b9d40?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      title: 'การปลูกต้นไม้และดูแลสิ่งแวดล้อม',
-      description: 'เริ่มต้นสร้างสีเขียวรอบตัวเพื่อโลกที่ดีขึ้น',
-      icon: <TreePine className="h-8 w-8 text-eco-teal" />,
-      content: [
-        'ปลูกต้นไม้ในบ้านและชุมชน',
-        'ดูแลพื้นที่สีเขียวให้เจริญเติบโต',
-        'ใช้น้ำอย่างประหยัดและรู้คุณค่า',
-        'ร่วมกิจกรรมอนุรักษ์ธรรมชาติในชุมชน'
-      ],
-      image: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      title: 'การประหยัดพลังงาน',
-      description: 'เทคนิคง่ายๆ ในการใช้พลังงานอย่างมีประสิทธิภาพ',
-      icon: <Droplets className="h-8 w-8 text-eco-teal" />,
-      content: [
-        'ปิดไฟและเครื่องใช้ไฟฟ้าเมื่อไม่ใช้',
-        'ใช้หลอดไฟ LED ประหยัดพลังงาน',
-        'ตั้งอุณหภูมิแอร์ที่เหมาะสม 25-26 องศา',
-        'เลือกใช้เครื่องใช้ไฟฟ้าที่ประหยัดพลังงาน'
-      ],
-      image: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=400&q=80'
-    }
-  ];
+  const [articles, setArticles] = useState<EducationTag[]>([]);
+  const [videos, setVideos] = useState<EducationTag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const educationalVideos = [
-    {
-      id: 'dQw4w9WgXcQ',
-      title: 'วิธีการแยกขยะที่ถูกต้อง',
-      description: 'เรียนรู้ขั้นตอนการแยกขยะแต่ละประเภทอย่างละเอียด พร้อมทั้งเคล็ดลับในการจัดการขยะในบ้านให้มีประสิทธิภาพ',
-      duration: '5:30'
-    },
-    {
-      id: 'jNQXAC9IVRw',
-      title: 'การลดใช้พลาสติกในชีวิตประจำวัน',
-      description: 'ค้นพบวิธีง่ายๆ ในการลดการใช้พลาสติกและเปลี่ยนมาใช้วัสดุที่เป็นมิตรกับสิ่งแวดล้อม',
-      duration: '7:15'
-    },
-    {
-      id: 'Me-VhC9ieh0',
-      title: 'การทำปุ่ยหมักจากขยะเปียก',
-      description: 'เรียนรู้วิธีการทำปุ่ยหมักจากเศษอาหารและขยะเปียกในครัวเรือน เพื่อลดขยะและเพิ่มความอุดมสมบูรณ์ให้ดิน',
-      duration: '10:45'
+  useEffect(() => {
+    fetchEducationTags();
+  }, []);
+
+  const fetchEducationTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('education_tags')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const articleData = data?.filter(tag => tag.type === 'article') || [];
+      const videoData = data?.filter(tag => tag.type === 'video') || [];
+
+      setArticles(articleData);
+      setVideos(videoData);
+    } catch (error) {
+      console.error('Error fetching education tags:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลความรู้ได้"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // ฟังก์ชันดึง YouTube Video ID จาก URL
+  const getYouTubeVideoId = (url: string) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  // ฟังก์ชันสำหรับสร้าง YouTube thumbnail URL
+  const getYouTubeThumbnail = (url: string) => {
+    const videoId = getYouTubeVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+  };
 
   const tips = [
     {
@@ -101,6 +92,18 @@ const Education = () => {
       ]
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -148,35 +151,42 @@ const Education = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {educationCards.map((card, index) => (
-                    <Card key={index} className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                      <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                        <img 
-                          src={card.image}
-                          alt={card.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                  {articles.map((article) => (
+                    <Card key={article.id} className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                      {article.image_url && (
+                        <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                          <img 
+                            src={article.image_url}
+                            alt={article.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                       <CardHeader>
                         <div className="flex items-center gap-3 mb-2">
-                          {card.icon}
-                          <CardTitle className="text-eco-blue">{card.title}</CardTitle>
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: article.color + '20' }}>
+                            <BookOpen className="h-4 w-4" style={{ color: article.color }} />
+                          </div>
+                          <CardTitle className="text-eco-blue">{article.name}</CardTitle>
                         </div>
-                        <p className="text-gray-600">{card.description}</p>
+                        <p className="text-gray-600">{article.description}</p>
                       </CardHeader>
                       <CardContent>
-                        <ul className="space-y-2">
-                          {card.content.map((item, itemIndex) => (
-                            <li key={itemIndex} className="flex items-start gap-2">
-                              <div className="w-2 h-2 bg-eco-teal rounded-full mt-2 flex-shrink-0"></div>
-                              <span className="text-gray-700">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        {article.content && (
+                          <div className="prose prose-sm max-w-none">
+                            <p className="text-gray-700 line-clamp-4">{article.content}</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
+
+                {articles.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">ยังไม่มีบทความความรู้</p>
+                  </div>
+                )}
 
                 {/* Tips Section */}
                 <div className="py-20 bg-eco-light">
@@ -219,45 +229,59 @@ const Education = () => {
                 </div>
 
                 <div className="space-y-12">
-                  {educationalVideos.map((video, index) => (
-                    <div key={index} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                  {videos.map((video, index) => (
+                    <div key={video.id} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                       <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
-                        <iframe
-                          width="100%"
-                          height="100%"
-                          src={`https://www.youtube.com/embed/${video.id}`}
-                          title={video.title}
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="w-full h-full"
-                        ></iframe>
+                        {video.youtube_url && getYouTubeVideoId(video.youtube_url) ? (
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={`https://www.youtube.com/embed/${getYouTubeVideoId(video.youtube_url)}`}
+                            title={video.name}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full"
+                          ></iframe>
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <Youtube className="h-16 w-16 text-gray-400" />
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <Youtube className="h-6 w-6 text-red-600" />
-                          <Badge variant="outline" className="text-sm">
-                            {video.duration}
-                          </Badge>
+                          <div className="h-6 w-6 rounded-full flex items-center justify-center" style={{ backgroundColor: video.color + '20' }}>
+                            <Youtube className="h-4 w-4" style={{ color: video.color }} />
+                          </div>
                         </div>
                         <h3 className="text-xl font-bold text-eco-blue">
-                          {video.title}
+                          {video.name}
                         </h3>
                         <p className="text-gray-600 leading-relaxed">
                           {video.description}
                         </p>
-                        <div className="pt-4">
-                          <Button 
-                            variant="outline" 
-                            className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white"
-                          >
-                            ดูเพิ่มเติม
-                          </Button>
-                        </div>
+                        {video.youtube_url && (
+                          <div className="pt-4">
+                            <Button 
+                              variant="outline" 
+                              className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white"
+                              onClick={() => window.open(video.youtube_url, '_blank')}
+                            >
+                              ดูใน YouTube
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {videos.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">ยังไม่มีวิดีโอความรู้</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
