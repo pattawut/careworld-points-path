@@ -30,7 +30,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // ดึงข้อมูลผู้ใช้จาก profiles รวมถึง role และ email
+      // ดึงข้อมูลผู้ใช้จาก profiles รวมถึง role
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,11 +44,21 @@ export function AdminUsers() {
         return;
       }
       
-      // แปลงข้อมูลให้ตรงกับ UserProfile type
+      // ดึงข้อมูลอีเมลจาก auth.users (ต้องใช้ admin policy ใน database)
+      const { data: userData, error: userError } = await (supabase as any).auth.admin.listUsers();
+      
+      const emailMap: Record<string, string> = {};
+      if (userData?.users) {
+        userData.users.forEach((user: any) => {
+          emailMap[user.id] = user.email;
+        });
+      }
+      
+      // รวมข้อมูลจาก profiles และอีเมล
       const enhancedProfiles: UserProfile[] = profilesData.map(profile => ({
         ...profile,
         is_admin: profile.role === 'admin',
-        email: profile.email || undefined
+        email: emailMap[profile.id]
       }));
       
       setUsers(enhancedProfiles);
