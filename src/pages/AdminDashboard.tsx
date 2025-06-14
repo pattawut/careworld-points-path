@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AdminCampaigns } from '@/components/admin/AdminCampaigns';
 import { AdminUsers } from '@/components/admin/AdminUsers';
 import { AdminTags } from '@/components/admin/AdminTags';
+import { AdminEducationTags } from '@/components/admin/AdminEducationTags';
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
@@ -174,7 +175,13 @@ const AdminDashboard = () => {
                 value="tags" 
                 className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
               >
-                จัดการ Tag
+                จัดการ Tag กิจกรรม
+              </TabsTrigger>
+              <TabsTrigger 
+                value="education" 
+                className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
+              >
+                จัดการความรู้
               </TabsTrigger>
               <TabsTrigger 
                 value="users" 
@@ -190,6 +197,10 @@ const AdminDashboard = () => {
             
             <TabsContent value="tags">
               <AdminTags />
+            </TabsContent>
+            
+            <TabsContent value="education">
+              <AdminEducationTags />
             </TabsContent>
             
             <TabsContent value="users">

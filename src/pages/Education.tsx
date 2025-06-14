@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RecycleIcon, Leaf, TreePine, Droplets } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RecycleIcon, Leaf, TreePine, Droplets, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Education = () => {
@@ -30,7 +32,7 @@ const Education = () => {
         'เลือกซื้อสินค้าที่มีบรรจุภัณฑ์น้อย',
         'นำภาชนะไปซื้ออาหารแทนโฟมหรือถุงพลาสติก'
       ],
-      image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'
+      image: 'https://images.unsplash.com/photo-1573167243872-43c6433b9d40?auto=format&fit=crop&w=400&q=80'
     },
     {
       title: 'การปลูกต้นไม้และดูแลสิ่งแวดล้อม',
@@ -55,6 +57,27 @@ const Education = () => {
         'เลือกใช้เครื่องใช้ไฟฟ้าที่ประหยัดพลังงาน'
       ],
       image: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=400&q=80'
+    }
+  ];
+
+  const educationalVideos = [
+    {
+      id: 'dQw4w9WgXcQ',
+      title: 'วิธีการแยกขยะที่ถูกต้อง',
+      description: 'เรียนรู้ขั้นตอนการแยกขยะแต่ละประเภทอย่างละเอียด พร้อมทั้งเคล็ดลับในการจัดการขยะในบ้านให้มีประสิทธิภาพ',
+      duration: '5:30'
+    },
+    {
+      id: 'jNQXAC9IVRw',
+      title: 'การลดใช้พลาสติกในชีวิตประจำวัน',
+      description: 'ค้นพบวิธีง่ายๆ ในการลดการใช้พลาสติกและเปลี่ยนมาใช้วัสดุที่เป็นมิตรกับสิ่งแวดล้อม',
+      duration: '7:15'
+    },
+    {
+      id: 'Me-VhC9ieh0',
+      title: 'การทำปุ่ยหมักจากขยะเปียก',
+      description: 'เรียนรู้วิธีการทำปุ่ยหมักจากเศษอาหารและขยะเปียกในครัวเรือน เพื่อลดขยะและเพิ่มความอุดมสมบูรณ์ให้ดิน',
+      duration: '10:45'
     }
   ];
 
@@ -100,78 +123,143 @@ const Education = () => {
           </div>
         </section>
 
-        {/* Education Cards */}
+        {/* Main Content with Tabs */}
         <section className="py-20 bg-white">
           <div className="container px-4 md:px-6">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-eco-blue mb-4">
-                หัวข้อการเรียนรู้
-              </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                ความรู้พื้นฐานที่จำเป็นสำหรับการดูแลสิ่งแวดล้อมในชีวิตประจำวัน
-              </p>
-            </div>
+            <Tabs defaultValue="articles" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-12">
+                <TabsTrigger value="articles" className="text-base">
+                  บทความความรู้
+                </TabsTrigger>
+                <TabsTrigger value="videos" className="text-base">
+                  วิดีโอความรู้
+                </TabsTrigger>
+              </TabsList>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {educationCards.map((card, index) => (
-                <Card key={index} className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                  <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                    <img 
-                      src={card.image}
-                      alt={card.title}
-                      className="w-full h-full object-cover"
-                    />
+              {/* Articles Tab */}
+              <TabsContent value="articles" className="space-y-20">
+                <div className="text-center mb-12">
+                  <h2 className="text-3xl font-bold text-eco-blue mb-4">
+                    หัวข้อการเรียนรู้
+                  </h2>
+                  <p className="text-gray-600 max-w-2xl mx-auto">
+                    ความรู้พื้นฐานที่จำเป็นสำหรับการดูแลสิ่งแวดล้อมในชีวิตประจำวัน
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {educationCards.map((card, index) => (
+                    <Card key={index} className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                      <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                        <img 
+                          src={card.image}
+                          alt={card.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <CardHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                          {card.icon}
+                          <CardTitle className="text-eco-blue">{card.title}</CardTitle>
+                        </div>
+                        <p className="text-gray-600">{card.description}</p>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {card.content.map((item, itemIndex) => (
+                            <li key={itemIndex} className="flex items-start gap-2">
+                              <div className="w-2 h-2 bg-eco-teal rounded-full mt-2 flex-shrink-0"></div>
+                              <span className="text-gray-700">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Tips Section */}
+                <div className="py-20 bg-eco-light">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    {tips.map((tip, index) => (
+                      <Card key={index} className="border-none shadow-md">
+                        <CardHeader>
+                          <CardTitle className="text-eco-blue flex items-center gap-2">
+                            <Leaf className="h-5 w-5" />
+                            {tip.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-3">
+                            {tip.items.map((item, itemIndex) => (
+                              <li key={itemIndex} className="flex items-start gap-3">
+                                <Badge variant="outline" className="text-xs px-2 py-1 mt-0.5">
+                                  {itemIndex + 1}
+                                </Badge>
+                                <span className="text-gray-700">{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      {card.icon}
-                      <CardTitle className="text-eco-blue">{card.title}</CardTitle>
-                    </div>
-                    <p className="text-gray-600">{card.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {card.content.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start gap-2">
-                          <div className="w-2 h-2 bg-eco-teal rounded-full mt-2 flex-shrink-0"></div>
-                          <span className="text-gray-700">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
+                </div>
+              </TabsContent>
 
-        {/* Tips Section */}
-        <section className="py-20 bg-eco-light">
-          <div className="container px-4 md:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {tips.map((tip, index) => (
-                <Card key={index} className="border-none shadow-md">
-                  <CardHeader>
-                    <CardTitle className="text-eco-blue flex items-center gap-2">
-                      <Leaf className="h-5 w-5" />
-                      {tip.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {tip.items.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start gap-3">
-                          <Badge variant="outline" className="text-xs px-2 py-1 mt-0.5">
-                            {itemIndex + 1}
+              {/* Videos Tab */}
+              <TabsContent value="videos" className="space-y-12">
+                <div className="text-center mb-12">
+                  <h2 className="text-3xl font-bold text-eco-blue mb-4">
+                    วิดีโอเพื่อการเรียนรู้
+                  </h2>
+                  <p className="text-gray-600 max-w-2xl mx-auto">
+                    เรียนรู้ผ่านคลิปวิดีโอที่น่าสนใจและเข้าใจง่าย
+                  </p>
+                </div>
+
+                <div className="space-y-12">
+                  {educationalVideos.map((video, index) => (
+                    <div key={index} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                      <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${video.id}`}
+                          title={video.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full h-full"
+                        ></iframe>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Youtube className="h-6 w-6 text-red-600" />
+                          <Badge variant="outline" className="text-sm">
+                            {video.duration}
                           </Badge>
-                          <span className="text-gray-700">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        </div>
+                        <h3 className="text-xl font-bold text-eco-blue">
+                          {video.title}
+                        </h3>
+                        <p className="text-gray-600 leading-relaxed">
+                          {video.description}
+                        </p>
+                        <div className="pt-4">
+                          <Button 
+                            variant="outline" 
+                            className="border-eco-teal text-eco-teal hover:bg-eco-teal hover:text-white"
+                          >
+                            ดูเพิ่มเติม
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </section>
 
