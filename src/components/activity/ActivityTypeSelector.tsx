@@ -18,19 +18,6 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Define default activity types in case no campaigns are found
-  const defaultActivityTypes = [
-    { value: 'recycling', label: 'รีไซเคิล' },
-    { value: 'energy_saving', label: 'ประหยัดพลังงาน' },
-    { value: 'water_conservation', label: 'อนุรักษ์น้ำ' },
-    { value: 'transportation', label: 'การขนส่งสีเขียว' },
-    { value: 'waste_reduction', label: 'ลดขยะ' },
-    { value: 'tree_planting', label: 'ปลูกต้นไม้' },
-    { value: 'community_cleanup', label: 'ทำความสะอาดชุมชน' },
-    { value: 'education', label: 'การศึกษา' },
-    { value: 'general', label: 'ทั่วไป' }
-  ];
-
   useEffect(() => {
     const fetchActiveCampaigns = async () => {
       try {
@@ -67,13 +54,16 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
     );
   }
 
-  // Use campaigns if available, otherwise fall back to default activity types
-  const activityOptions = campaigns.length > 0 
-    ? campaigns.map(campaign => ({
-        value: campaign.activity_type,
-        label: campaign.title
-      }))
-    : defaultActivityTypes;
+  if (campaigns.length === 0) {
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium">ประเภทกิจกรรม</label>
+        <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-gray-500">
+          ไม่มีแคมเปญที่เปิดใช้งาน
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -88,9 +78,9 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
         disabled={isDisabled}
       >
         <option value="">เลือกประเภทกิจกรรม</option>
-        {activityOptions.map((option, index) => (
-          <option key={`${option.value}-${index}`} value={option.value}>
-            {option.label}
+        {campaigns.map((campaign) => (
+          <option key={campaign.id} value={campaign.activity_type}>
+            {campaign.title}
           </option>
         ))}
       </select>
