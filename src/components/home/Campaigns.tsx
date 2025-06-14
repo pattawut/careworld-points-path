@@ -15,6 +15,11 @@ type Campaign = {
   start_date: string | null;
   end_date: string | null;
   status: string;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
 };
 
 export const Campaigns = () => {
@@ -25,7 +30,9 @@ export const Campaigns = () => {
     const fetchCampaigns = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // Fetch campaigns
+        const { data: campaignsData, error } = await supabase
           .from('campaigns')
           .select('*')
           .in('status', ['active', 'promoted', 'coming_soon'])
@@ -37,7 +44,31 @@ export const Campaigns = () => {
           throw error;
         }
         
-        setCampaigns(data as Campaign[] || []);
+        // Fetch tags for each campaign
+        const campaignsWithTags = await Promise.all(
+          (campaignsData || []).map(async (campaign) => {
+            const { data: tagData, error: tagError } = await supabase
+              .from('campaign_tag_relations')
+              .select(`
+                campaign_tags (
+                  id,
+                  name,
+                  color
+                )
+              `)
+              .eq('campaign_id', campaign.id);
+
+            if (tagError) {
+              console.error('Error fetching tags for campaign:', campaign.id, tagError);
+              return { ...campaign, tags: [] };
+            }
+
+            const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+            return { ...campaign, tags };
+          })
+        );
+        
+        setCampaigns(campaignsWithTags as Campaign[]);
       } catch (error) {
         console.error('Error fetching campaigns:', error);
         // ใช้ข้อมูลตัวอย่างในกรณีเกิดข้อผิดพลาด
@@ -50,7 +81,8 @@ export const Campaigns = () => {
             points: 1,
             start_date: null,
             end_date: null,
-            status: 'active'
+            status: 'active',
+            tags: [{ id: '1', name: 'ถุงผ้า', color: '#10B981' }]
           },
           {
             id: 'sample-2',
@@ -60,7 +92,8 @@ export const Campaigns = () => {
             points: 2,
             start_date: null,
             end_date: null,
-            status: 'active'
+            status: 'active',
+            tags: [{ id: '2', name: 'นำกลับมาใช้ซ้ำ', color: '#3B82F6' }]
           }
         ]);
       } finally {
@@ -81,7 +114,8 @@ export const Campaigns = () => {
       points: 1,
       start_date: null,
       end_date: null,
-      status: 'active'
+      status: 'active',
+      tags: [{ id: '1', name: 'ถุงผ้า', color: '#10B981' }]
     },
     {
       id: 'sample-2',
@@ -91,7 +125,8 @@ export const Campaigns = () => {
       points: 2,
       start_date: null,
       end_date: null,
-      status: 'active'
+      status: 'active',
+      tags: [{ id: '2', name: 'นำกลับมาใช้ซ้ำ', color: '#3B82F6' }]
     }
   ];
   
@@ -154,6 +189,27 @@ export const Campaigns = () => {
                 <p className="text-gray-600 mb-4">
                   {campaign.description || "ร่วมแคมเปญรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
                 </p>
+                
+                {/* Display campaign tags */}
+                {campaign.tags && campaign.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {campaign.tags.map((tag) => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        style={{ 
+                          backgroundColor: tag.color + '20', 
+                          color: tag.color, 
+                          borderColor: tag.color 
+                        }}
+                        className="text-xs"
+                      >
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">คะแนน: {campaign.points} แต้ม/ครั้ง</span>
                   <Button asChild className="bg-eco-gradient hover:opacity-90">

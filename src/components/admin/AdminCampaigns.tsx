@@ -20,6 +20,11 @@ interface Campaign {
   end_date: string | null;
   created_at: string;
   updated_at: string;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
 }
 
 export const AdminCampaigns = () => {
@@ -33,13 +38,40 @@ export const AdminCampaigns = () => {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First, fetch campaigns
+      const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setCampaigns(data || []);
+      if (campaignsError) throw campaignsError;
+
+      // Then, fetch tags for each campaign
+      const campaignsWithTags = await Promise.all(
+        (campaignsData || []).map(async (campaign) => {
+          const { data: tagData, error: tagError } = await supabase
+            .from('campaign_tag_relations')
+            .select(`
+              campaign_tags (
+                id,
+                name,
+                color
+              )
+            `)
+            .eq('campaign_id', campaign.id);
+
+          if (tagError) {
+            console.error('Error fetching tags for campaign:', campaign.id, tagError);
+            return { ...campaign, tags: [] };
+          }
+
+          const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
+          return { ...campaign, tags };
+        })
+      );
+
+      setCampaigns(campaignsWithTags);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       toast({
@@ -142,6 +174,26 @@ export const AdminCampaigns = () => {
                 </div>
                 {getStatusBadge(campaign.status)}
               </div>
+              
+              {/* Display campaign tags */}
+              {campaign.tags && campaign.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {campaign.tags.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      variant="outline"
+                      style={{ 
+                        backgroundColor: tag.color + '20', 
+                        color: tag.color, 
+                        borderColor: tag.color 
+                      }}
+                      className="text-xs"
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-3">

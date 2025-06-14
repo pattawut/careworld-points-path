@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/auth';
 import { ImageUpload } from './ImageUpload';
+import { CampaignTagSelector } from './CampaignTagSelector';
 
 interface Campaign {
   id: string;
@@ -37,6 +38,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
   const [status, setStatus] = useState('draft');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -50,6 +52,9 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
       setStatus(campaign.status);
       setStartDate(campaign.start_date ? campaign.start_date.split('T')[0] : '');
       setEndDate(campaign.end_date ? campaign.end_date.split('T')[0] : '');
+      
+      // Fetch existing tags for this campaign
+      fetchCampaignTags(campaign.id);
     } else {
       setTitle('');
       setDescription('');
@@ -58,12 +63,64 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
       setStatus('draft');
       setStartDate('');
       setEndDate('');
+      setSelectedTags([]);
     }
   }, [campaign]);
+
+  const fetchCampaignTags = async (campaignId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('campaign_tag_relations')
+        .select('tag_id')
+        .eq('campaign_id', campaignId);
+
+      if (error) throw error;
+      
+      setSelectedTags(data?.map(relation => relation.tag_id) || []);
+    } catch (error) {
+      console.error('Error fetching campaign tags:', error);
+    }
+  };
+
+  const saveCampaignTags = async (campaignId: string) => {
+    try {
+      // Delete existing tag relations
+      await supabase
+        .from('campaign_tag_relations')
+        .delete()
+        .eq('campaign_id', campaignId);
+
+      // Insert new tag relations
+      if (selectedTags.length > 0) {
+        const tagRelations = selectedTags.map(tagId => ({
+          campaign_id: campaignId,
+          tag_id: tagId
+        }));
+
+        const { error } = await supabase
+          .from('campaign_tag_relations')
+          .insert(tagRelations);
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error saving campaign tags:', error);
+      throw error;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (selectedTags.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "กรุณาเลือก Tag",
+        description: "ต้องเลือกอย่างน้อย 1 tag สำหรับกิจกรรม"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -78,6 +135,8 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
         created_by: user.id
       };
 
+      let campaignId: string;
+
       if (campaign) {
         // Update existing campaign
         const { error } = await supabase
@@ -86,6 +145,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
           .eq('id', campaign.id);
 
         if (error) throw error;
+        campaignId = campaign.id;
 
         toast({
           title: "อัปเดตสำเร็จ",
@@ -93,17 +153,23 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
         });
       } else {
         // Create new campaign
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('campaigns')
-          .insert(campaignData);
+          .insert(campaignData)
+          .select()
+          .single();
 
         if (error) throw error;
+        campaignId = data.id;
 
         toast({
           title: "สร้างสำเร็จ",
           description: "กิจกรรมใหม่ได้รับการสร้างแล้ว"
         });
       }
+
+      // Save campaign tags
+      await saveCampaignTags(campaignId);
 
       onSuccess();
       onOpenChange(false);
@@ -157,6 +223,12 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
           <ImageUpload
             imageUrl={imageUrl}
             onImageUrlChange={setImageUrl}
+          />
+
+          <CampaignTagSelector
+            campaignId={campaign?.id}
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
           />
 
           <div className="grid grid-cols-2 gap-4">
