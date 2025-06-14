@@ -19,25 +19,26 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchActiveCampaigns = async () => {
       try {
         const { data, error } = await supabase
           .from('campaigns')
           .select('id, title, activity_type')
           .eq('status', 'active')
           .not('activity_type', 'is', null)
+          .is('user_id', null) // Only system campaigns, not user activities
           .order('title');
 
         if (error) throw error;
         setCampaigns(data || []);
       } catch (error) {
-        console.error('Error fetching campaigns:', error);
+        console.error('Error fetching active campaigns:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCampaigns();
+    fetchActiveCampaigns();
   }, []);
 
   if (loading) {
