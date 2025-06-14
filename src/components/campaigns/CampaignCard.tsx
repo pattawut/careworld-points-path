@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +37,7 @@ export const CampaignCard = ({ campaign }: CampaignCardProps) => {
     return (
       <Badge 
         variant={statusInfo.variant}
-        className={statusInfo.className}
+        className={'className' in statusInfo ? statusInfo.className : undefined}
       >
         {statusInfo.label}
       </Badge>
