@@ -206,9 +206,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_user_total_points: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      update_profile_points: {
+        Args: { user_uuid: string }
+        Returns: undefined
       }
     }
     Enums: {
