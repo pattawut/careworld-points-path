@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AdminCampaigns } from '@/components/admin/AdminCampaigns';
@@ -29,8 +30,7 @@ const AdminDashboard = () => {
       }
       
       try {
-        // Using any type to bypass TypeScript errors with the new table
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
@@ -60,8 +60,7 @@ const AdminDashboard = () => {
     if (!user) return;
     
     try {
-      // Using any type to bypass TypeScript errors with the new table
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('user_roles')
         .insert({
           user_id: user.id,
@@ -171,7 +170,7 @@ const AdminDashboard = () => {
                 value="campaigns" 
                 className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
               >
-                จัดการแคมเปญ
+                จัดการกิจกรรม
               </TabsTrigger>
               <TabsTrigger 
                 value="users" 

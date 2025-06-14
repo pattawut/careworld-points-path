@@ -11,6 +11,7 @@ type Campaign = {
   title: string;
   description: string | null;
   image_url: string | null;
+  points: number;
   start_date: string | null;
   end_date: string | null;
   status: string;
@@ -24,9 +25,10 @@ export const Campaigns = () => {
     const fetchCampaigns = async () => {
       try {
         setLoading(true);
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('campaigns')
           .select('*')
+          .in('status', ['active', 'promoted', 'coming_soon'])
           .limit(4)
           .order('created_at', { ascending: false });
           
@@ -44,6 +46,7 @@ export const Campaigns = () => {
             title: 'ถุงผ้ารักษ์โลก',
             description: 'ร่วมรณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน แชร์ภาพการใช้ถุงผ้าสะสมแต้ม',
             image_url: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=500&q=80',
+            points: 1,
             start_date: null,
             end_date: null,
             status: 'active'
@@ -53,6 +56,7 @@ export const Campaigns = () => {
             title: 'แก้วและหลอดรียูส',
             description: 'ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ แชร์ภาพการใช้แก้วและหลอดส่วนตัวสะสมแต้ม',
             image_url: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=500&q=80',
+            points: 2,
             start_date: null,
             end_date: null,
             status: 'active'
@@ -73,6 +77,7 @@ export const Campaigns = () => {
       title: 'ถุงผ้ารักษ์โลก',
       description: 'ร่วมรณรงค์การใช้ถุงผ้าแทนถุงพลาสติกในชีวิตประจำวัน แชร์ภาพการใช้ถุงผ้าสะสมแต้ม',
       image_url: 'https://images.unsplash.com/photo-1597348989645-46b190ce4918?auto=format&fit=crop&w=500&q=80',
+      points: 1,
       start_date: null,
       end_date: null,
       status: 'active'
@@ -82,6 +87,7 @@ export const Campaigns = () => {
       title: 'แก้วและหลอดรียูส',
       description: 'ส่งเสริมการใช้แก้วน้ำและหลอดแบบใช้ซ้ำ แชร์ภาพการใช้แก้วและหลอดส่วนตัวสะสมแต้ม',
       image_url: 'https://images.unsplash.com/photo-1536939459926-301728717817?auto=format&fit=crop&w=500&q=80',
+      points: 2,
       start_date: null,
       end_date: null,
       status: 'active'
@@ -93,11 +99,27 @@ export const Campaigns = () => {
     switch (status) {
       case 'active':
         return 'กำลังดำเนินการ';
+      case 'promoted':
+        return 'โปรโมตแล้ว';
+      case 'coming_soon':
+        return 'เร็วๆ นี้';
       case 'completed':
         return 'สิ้นสุดแล้ว';
-      case 'upcoming':
       default:
         return 'กำลังจะมาถึง';
+    }
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'promoted':
+        return 'destructive';
+      case 'coming_soon':
+        return 'secondary';
+      default:
+        return 'outline';
     }
   };
 
@@ -121,7 +143,9 @@ export const Campaigns = () => {
                   className="object-cover w-full h-full"
                 />
                 <div className="absolute top-3 right-3">
-                  <Badge className="bg-eco-teal">{getStatusText(campaign.status)}</Badge>
+                  <Badge variant={getStatusVariant(campaign.status) as any}>
+                    {getStatusText(campaign.status)}
+                  </Badge>
                 </div>
               </div>
               <div className="p-6">
@@ -130,7 +154,7 @@ export const Campaigns = () => {
                   {campaign.description || "ร่วมกิจกรรมรักษ์โลกกับเรา เพื่อสิ่งแวดล้อมที่ยั่งยืน"}
                 </p>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">คะแนน: 1 แต้ม/ครั้ง</span>
+                  <span className="text-sm text-gray-500">คะแนน: {campaign.points} แต้ม/ครั้ง</span>
                   <Button asChild className="bg-eco-gradient hover:opacity-90">
                     <Link to={`/campaigns/${campaign.id}`}>เข้าร่วม</Link>
                   </Button>

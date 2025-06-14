@@ -1,0 +1,80 @@
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+
+interface Campaign {
+  id: string;
+  title: string;
+}
+
+interface CampaignDeleteDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  campaign: Campaign | null;
+  onSuccess: () => void;
+}
+
+export const CampaignDeleteDialog = ({ open, onOpenChange, campaign, onSuccess }: CampaignDeleteDialogProps) => {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!campaign) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaign.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "ลบสำเร็จ",
+        description: "กิจกรรมได้รับการลบแล้ว"
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบกิจกรรมได้"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>ลบกิจกรรม</DialogTitle>
+          <DialogDescription>
+            คุณแน่ใจหรือไม่ที่จะลบกิจกรรม "{campaign?.title}" การดำเนินการนี้ไม่สามารถยกเลิกได้
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            ยกเลิก
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete}
+            disabled={loading}
+          >
+            {loading ? "กำลังลบ..." : "ลบ"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

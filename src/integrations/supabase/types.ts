@@ -42,6 +42,48 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          points: number
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          points?: number
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          points?: number
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -110,7 +152,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
