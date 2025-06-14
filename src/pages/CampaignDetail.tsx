@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -181,11 +180,12 @@ const CampaignDetail = () => {
     try {
       setIsLoading(true);
       
-      // Fetch activities related to this campaign type
+      // Fetch user activities related to this campaign type from campaigns table
       const { data: activitiesData, error: activitiesError } = await supabase
-        .from('activities')
+        .from('campaigns')
         .select('*, user:user_id(full_name, avatar_url)')
         .eq('activity_type', slug)
+        .not('user_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -276,15 +276,16 @@ const CampaignDetail = () => {
         
       const imageUrl = publicUrlData.publicUrl;
       
-      // Add activity to activities table
+      // Add activity to campaigns table instead of activities table
       const { error: activityError } = await supabase
-        .from('activities')
+        .from('campaigns')
         .insert([{
           user_id: user.id,
           activity_type: slug || 'recycle',
           description: caption,
           image_url: imageUrl,
-          points: campaign.points || 1, // Use points from campaign
+          points: campaign.points || 1,
+          status: 'archived', // User activities are archived by default
         }]);
         
       if (activityError) {

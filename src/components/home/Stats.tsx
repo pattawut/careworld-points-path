@@ -23,25 +23,28 @@ export const Stats = () => {
           
         if (userError) throw userError;
         
-        // Count total activities
+        // Count total user activities from campaigns table (where user_id is not null)
         const { count: activityCount, error: activityError } = await supabase
-          .from('activities')
-          .select('*', { count: 'exact', head: true });
+          .from('campaigns')
+          .select('*', { count: 'exact', head: true })
+          .not('user_id', 'is', null);
           
         if (activityError) throw activityError;
         
-        // Count activities by type
+        // Count activities by type from campaigns table
         const { count: recycleCount, error: recycleError } = await supabase
-          .from('activities')
+          .from('campaigns')
           .select('*', { count: 'exact', head: true })
-          .eq('activity_type', 'recycle');
+          .eq('activity_type', 'recycle')
+          .not('user_id', 'is', null);
           
         if (recycleError) throw recycleError;
         
         const { count: bagCount, error: bagError } = await supabase
-          .from('activities')
+          .from('campaigns')
           .select('*', { count: 'exact', head: true })
-          .eq('activity_type', 'bag');
+          .eq('activity_type', 'bag')
+          .not('user_id', 'is', null);
           
         if (bagError) throw bagError;
         

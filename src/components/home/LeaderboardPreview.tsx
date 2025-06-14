@@ -39,11 +39,11 @@ export const LeaderboardPreview = () => {
           return;
         }
           
-        // Count activities for each user
+        // Count activities for each user from campaigns table
         const usersWithActivitiesCounts = await Promise.all(
           users.map(async (user) => {
             const { count, error } = await supabase
-              .from('activities')
+              .from('campaigns')
               .select('*', { count: 'exact', head: true })
               .eq('user_id', user.id);
               
