@@ -12,10 +12,13 @@ import { useAuth } from '@/context/AuthContext';
 import { ActivityForm } from '@/components/activity/ActivityForm';
 import { ActivityList } from '@/components/ActivityList';
 import { AvailableCampaigns } from '@/components/dashboard/AvailableCampaigns';
+import { PointLogsCard } from '@/components/points/PointLogsCard';
+import { useUserPointLogs } from '@/hooks/useUserPointLogs';
 import { supabase } from '@/integrations/supabase/client';
 
 const UserStats = () => {
   const { profile, user } = useAuth();
+  const { totalPoints } = useUserPointLogs();
   const [userActivitiesCount, setUserActivitiesCount] = useState(0);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +38,7 @@ const UserStats = () => {
           
         if (activitiesError) throw activitiesError;
         
-        // Get user's rank
+        // Get user's rank based on eco_points
         const { data: rankData, error: rankError } = await supabase
           .from('profiles')
           .select('id, eco_points')
@@ -64,7 +67,7 @@ const UserStats = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">คะแนนสะสม</p>
-              <h3 className="text-2xl font-bold text-eco-blue">{profile?.eco_points || 0}</h3>
+              <h3 className="text-2xl font-bold text-eco-blue">{totalPoints || profile?.eco_points || 0}</h3>
             </div>
             <div className="h-12 w-12 rounded-full bg-eco-teal/10 flex items-center justify-center">
               <Award className="h-6 w-6 text-eco-teal" />
@@ -125,21 +128,20 @@ const UserStats = () => {
 };
 
 const NextLevel = () => {
-  const { profile } = useAuth();
-  const currentPoints = profile?.eco_points || 0;
+  const { totalPoints } = useUserPointLogs();
   const nextLevel = 300; // Points needed for next level
-  const progress = Math.min(Math.round((currentPoints / nextLevel) * 100), 100);
+  const progress = Math.min(Math.round((totalPoints / nextLevel) * 100), 100);
   
   return (
     <Card className="border-none shadow-md mb-8">
       <CardHeader className="pb-3">
         <CardTitle>ความคืบหน้าระดับถัดไป</CardTitle>
-        <CardDescription>อีก {Math.max(0, nextLevel - currentPoints)} คะแนน เพื่อไปสู่ระดับ "นักอนุรักษ์ธรรมชาติ"</CardDescription>
+        <CardDescription>อีก {Math.max(0, nextLevel - totalPoints)} คะแนน เพื่อไปสู่ระดับ "นักอนุรักษ์ธรรมชาติ"</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{currentPoints}/{nextLevel} คะแนน</span>
+            <span className="text-sm font-medium">{totalPoints}/{nextLevel} คะแนน</span>
             <span className="text-sm text-gray-500">{progress}%</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -219,6 +221,12 @@ const Dashboard = () => {
               >
                 กิจกรรมที่น่าสนใจ
               </TabsTrigger>
+              <TabsTrigger 
+                value="pointLogs" 
+                className="data-[state=active]:border-b-2 data-[state=active]:border-eco-teal rounded-none"
+              >
+                ประวัติคะแนน
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="myActivities">
@@ -231,6 +239,10 @@ const Dashboard = () => {
             
             <TabsContent value="campaigns">
               <AvailableCampaigns />
+            </TabsContent>
+            
+            <TabsContent value="pointLogs">
+              <PointLogsCard />
             </TabsContent>
           </Tabs>
         </div>

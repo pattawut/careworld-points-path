@@ -6,6 +6,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { PasswordChangeDialog } from '@/components/profile/PasswordChangeDialog';
 import { EcoPointsCard } from '@/components/profile/EcoPointsCard';
+import { PointLogsCard } from '@/components/points/PointLogsCard';
 
 export function UserProfile() {
   const { user, profile } = useAuth();
@@ -47,6 +48,8 @@ export function UserProfile() {
         <Card>
           <EcoPointsCard points={profile.eco_points || 0} />
         </Card>
+        
+        <PointLogsCard />
       </div>
       
       <PasswordChangeDialog 
