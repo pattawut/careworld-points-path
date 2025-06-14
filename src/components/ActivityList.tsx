@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,6 @@ import { ActivityForm } from './ActivityForm';
 import { ActivityItem } from './activity/ActivityItem';
 import { ActivityEmptyState } from './activity/ActivityEmptyState';
 import { ActivityLoading } from './activity/ActivityLoading';
-import { usePointLogs } from '@/hooks/usePointLogs';
 
 interface Campaign {
   id: string;
@@ -26,7 +26,6 @@ export const ActivityList = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { refetch: refetchPointLogs, refreshProfile } = usePointLogs();
 
   const fetchUserCampaigns = async () => {
     if (!user) return;
@@ -68,7 +67,7 @@ export const ActivityList = () => {
     try {
       setDeletingId(id);
       
-      // First, get the campaign to find the image path and points
+      // First, get the campaign to find the image path
       const { data: campaign, error: fetchError } = await supabase
         .from('campaigns')
         .select('*')
@@ -76,25 +75,6 @@ export const ActivityList = () => {
         .single();
         
       if (fetchError) throw fetchError;
-      
-      // สร้าง point log สำหรับการหักคะแนนก่อนลบ campaign
-      if (campaign.points > 0) {
-        const { error: pointLogError } = await supabase
-          .from('user_point_logs')
-          .insert({
-            user_id: user.id,
-            campaign_id: null, // ไม่อ้างอิงไปที่ campaign ที่จะถูกลบ
-            points: campaign.points,
-            activity_type: campaign.activity_type,
-            description: 'หักคะแนนจากการลบกิจกรรม: ' + (campaign.title || campaign.activity_type),
-            action_type: 'deducted'
-          });
-          
-        if (pointLogError) {
-          console.error('Error creating point log:', pointLogError);
-          // ไม่ throw error เพื่อให้การลบดำเนินต่อไปได้
-        }
-      }
       
       // Delete the campaign from the database
       const { error: deleteError } = await supabase
@@ -115,10 +95,6 @@ export const ActivityList = () => {
       // Update local state
       setCampaigns(campaigns.filter(campaign => campaign.id !== id));
       
-      // รีเฟรช point logs และ profile หลังจากลบ
-      await refetchPointLogs();
-      await refreshProfile();
-      
       toast({
         title: "ลบกิจกรรมสำเร็จ",
         description: "กิจกรรมถูกลบออกจากระบบเรียบร้อยแล้ว",
@@ -133,14 +109,6 @@ export const ActivityList = () => {
     } finally {
       setDeletingId(null);
     }
-  };
-
-  const handleEditSuccess = () => {
-    setEditingCampaign(null);
-    fetchUserCampaigns();
-    // รีเฟรช point logs และ profile หลังจากแก้ไข
-    refetchPointLogs();
-    refreshProfile();
   };
 
   if (editingCampaign) {
@@ -160,7 +128,10 @@ export const ActivityList = () => {
             description: editingCampaign.description || editingCampaign.title || '',
             image_url: editingCampaign.image_url || ''
           }}
-          onSuccess={handleEditSuccess}
+          onSuccess={() => {
+            setEditingCampaign(null);
+            fetchUserCampaigns();
+          }}
           onCancel={() => setEditingCampaign(null)}
         />
       </div>

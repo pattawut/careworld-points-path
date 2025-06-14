@@ -13,11 +13,9 @@ import { ActivityForm } from '@/components/activity/ActivityForm';
 import { ActivityList } from '@/components/ActivityList';
 import { AvailableCampaigns } from '@/components/dashboard/AvailableCampaigns';
 import { supabase } from '@/integrations/supabase/client';
-import { usePointLogs } from '@/hooks/usePointLogs';
 
 const UserStats = () => {
   const { profile, user } = useAuth();
-  const { totalPoints } = usePointLogs();
   const [userActivitiesCount, setUserActivitiesCount] = useState(0);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +35,7 @@ const UserStats = () => {
           
         if (activitiesError) throw activitiesError;
         
-        // Get user's rank based on actual eco_points from profiles
+        // Get user's rank
         const { data: rankData, error: rankError } = await supabase
           .from('profiles')
           .select('id, eco_points')
@@ -57,10 +55,7 @@ const UserStats = () => {
     };
     
     fetchUserStats();
-  }, [user, totalPoints]); // เพิ่ม totalPoints เป็น dependency
-  
-  // ใช้คะแนนจาก profiles ที่ถูกอัพเดทจาก point logs
-  const displayPoints = profile?.eco_points || 0;
+  }, [user]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -69,7 +64,7 @@ const UserStats = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">คะแนนสะสม</p>
-              <h3 className="text-2xl font-bold text-eco-blue">{displayPoints}</h3>
+              <h3 className="text-2xl font-bold text-eco-blue">{profile?.eco_points || 0}</h3>
             </div>
             <div className="h-12 w-12 rounded-full bg-eco-teal/10 flex items-center justify-center">
               <Award className="h-6 w-6 text-eco-teal" />
@@ -158,7 +153,6 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('myActivities');
   const { user, profile, isLoading } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { refetch: refetchPointLogs, refreshProfile } = usePointLogs();
   
   if (isLoading) {
     return null; // Loading state
@@ -171,9 +165,6 @@ const Dashboard = () => {
   const handleActivitySuccess = () => {
     setActiveTab('myActivities');
     setRefreshTrigger(prev => prev + 1);
-    // รีเฟรช point logs และ profile เมื่อมีกิจกรรมใหม่
-    refetchPointLogs();
-    refreshProfile();
   };
 
   // Check if user is admin

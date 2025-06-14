@@ -103,13 +103,13 @@ export const CampaignParticipation = ({
         .from('campaign-images')
         .getPublicUrl(uploadData.path);
 
-      // Create user activity record that references the original campaign
-      const { data: newActivity, error: insertError } = await supabase
+      // Create user activity record
+      const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
         .insert({
-          title: campaign.title, // ใช้ชื่อเดิมของแคมเปญ
-          description: description, // คำอธิบายของ user
-          image_url: publicUrl, // รูปภาพที่ user อัปโหลด
+          title: `${campaign.title} - กิจกรรมของ ${user.email}`,
+          description: description,
+          image_url: publicUrl,
           points: campaign.points,
           user_id: user.id,
           activity_type: campaign.activity_type,
@@ -121,9 +121,9 @@ export const CampaignParticipation = ({
       if (insertError) throw insertError;
 
       // Copy tags from original campaign to user's activity
-      if (campaign.tags && campaign.tags.length > 0 && newActivity) {
+      if (campaign.tags && campaign.tags.length > 0 && newCampaign) {
         const tagRelations = campaign.tags.map(tag => ({
-          campaign_id: newActivity.id,
+          campaign_id: newCampaign.id,
           tag_id: tag.id
         }));
 
@@ -136,8 +136,6 @@ export const CampaignParticipation = ({
           // Don't throw error as the main activity was created successfully
         }
       }
-
-      // ไม่ต้องสร้าง point log เพิ่มเติม เพราะ trigger handle_campaign_points จะจัดการให้
 
       toast({
         title: "เข้าร่วมสำเร็จ!",

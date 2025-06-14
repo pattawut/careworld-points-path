@@ -201,63 +201,14 @@ export type Database = {
         }
         Relationships: []
       }
-      user_point_logs: {
-        Row: {
-          action_type: string
-          activity_type: string | null
-          campaign_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          points: number
-          user_id: string
-        }
-        Insert: {
-          action_type: string
-          activity_type?: string | null
-          campaign_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          points: number
-          user_id: string
-        }
-        Update: {
-          action_type?: string
-          activity_type?: string | null
-          campaign_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          points?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_point_logs_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      calculate_user_total_points: {
-        Args: { user_uuid: string }
-        Returns: number
-      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
-      }
-      update_profile_points: {
-        Args: { user_uuid: string }
-        Returns: undefined
       }
     }
     Enums: {
