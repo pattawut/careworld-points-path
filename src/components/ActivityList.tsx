@@ -8,6 +8,7 @@ import { ActivityForm } from './ActivityForm';
 import { ActivityItem } from './activity/ActivityItem';
 import { ActivityEmptyState } from './activity/ActivityEmptyState';
 import { ActivityLoading } from './activity/ActivityLoading';
+import { usePointLogs } from '@/hooks/usePointLogs';
 
 interface Campaign {
   id: string;
@@ -26,6 +27,7 @@ export const ActivityList = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { refetch: refetchPointLogs, refreshProfile } = usePointLogs();
 
   const fetchUserCampaigns = async () => {
     if (!user) return;
@@ -76,7 +78,7 @@ export const ActivityList = () => {
         
       if (fetchError) throw fetchError;
       
-      // Delete the campaign from the database
+      // Delete the campaign from the database (trigger จะจัดการ point logs อัตโนมัติ)
       const { error: deleteError } = await supabase
         .from('campaigns')
         .delete()
@@ -95,6 +97,10 @@ export const ActivityList = () => {
       // Update local state
       setCampaigns(campaigns.filter(campaign => campaign.id !== id));
       
+      // รีเฟรช point logs และ profile หลังจากลบ
+      await refetchPointLogs();
+      await refreshProfile();
+      
       toast({
         title: "ลบกิจกรรมสำเร็จ",
         description: "กิจกรรมถูกลบออกจากระบบเรียบร้อยแล้ว",
@@ -109,6 +115,14 @@ export const ActivityList = () => {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingCampaign(null);
+    fetchUserCampaigns();
+    // รีเฟรช point logs และ profile หลังจากแก้ไข
+    refetchPointLogs();
+    refreshProfile();
   };
 
   if (editingCampaign) {
@@ -128,10 +142,7 @@ export const ActivityList = () => {
             description: editingCampaign.description || editingCampaign.title || '',
             image_url: editingCampaign.image_url || ''
           }}
-          onSuccess={() => {
-            setEditingCampaign(null);
-            fetchUserCampaigns();
-          }}
+          onSuccess={handleEditSuccess}
           onCancel={() => setEditingCampaign(null)}
         />
       </div>

@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
+import { usePointLogs } from '@/hooks/usePointLogs';
 
 interface Activity {
   id: string;
@@ -25,6 +26,7 @@ export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) =
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { refetch: refetchPointLogs, refreshProfile } = usePointLogs();
   const isEditing = !!activity;
 
   const handleImageChange = (file: File | null) => {
@@ -177,6 +179,10 @@ export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) =
         setImage(null);
         setPreview(null);
       }
+      
+      // รีเฟรช point logs และ profile หลังจากบันทึกสำเร็จ
+      await refetchPointLogs();
+      await refreshProfile();
       
       onSuccess();
       
