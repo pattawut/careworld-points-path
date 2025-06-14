@@ -75,18 +75,7 @@ export const ActivityList = () => {
         
       if (fetchError) throw fetchError;
       
-      // Delete related point logs first to avoid foreign key constraint issues
-      const { error: pointLogsError } = await supabase
-        .from('user_point_logs')
-        .delete()
-        .eq('campaign_id', id);
-        
-      if (pointLogsError) {
-        console.error('Error deleting point logs:', pointLogsError);
-        // Continue with campaign deletion even if point logs deletion fails
-      }
-      
-      // Delete the campaign from the database
+      // Delete the campaign from the database (point logs will be deleted automatically)
       const { error: deleteError } = await supabase
         .from('campaigns')
         .delete()

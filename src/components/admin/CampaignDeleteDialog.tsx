@@ -26,18 +26,7 @@ export const CampaignDeleteDialog = ({ open, onOpenChange, campaign, onSuccess }
 
     setLoading(true);
     try {
-      // First delete related point logs to avoid foreign key constraint issues
-      const { error: pointLogsError } = await supabase
-        .from('user_point_logs')
-        .delete()
-        .eq('campaign_id', campaign.id);
-
-      if (pointLogsError) {
-        console.error('Error deleting point logs:', pointLogsError);
-        // Continue with campaign deletion even if point logs deletion fails
-      }
-
-      // Then delete the campaign
+      // Delete the campaign (point logs will be deleted automatically due to CASCADE)
       const { error: campaignError } = await supabase
         .from('campaigns')
         .delete()
