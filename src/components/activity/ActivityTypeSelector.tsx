@@ -18,15 +18,28 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Define default activity types in case no campaigns are found
+  const defaultActivityTypes = [
+    { value: 'recycling', label: 'รีไซเคิล' },
+    { value: 'energy_saving', label: 'ประหยัดพลังงาน' },
+    { value: 'water_conservation', label: 'อนุรักษ์น้ำ' },
+    { value: 'transportation', label: 'การขนส่งสีเขียว' },
+    { value: 'waste_reduction', label: 'ลดขยะ' },
+    { value: 'tree_planting', label: 'ปลูกต้นไม้' },
+    { value: 'community_cleanup', label: 'ทำความสะอาดชุมชน' },
+    { value: 'education', label: 'การศึกษา' },
+    { value: 'general', label: 'ทั่วไป' }
+  ];
+
   useEffect(() => {
     const fetchActiveCampaigns = async () => {
       try {
         const { data, error } = await supabase
           .from('campaigns')
           .select('id, title, activity_type')
-          .in('status', ['active', 'promoted']) // Include both active and promoted campaigns
+          .in('status', ['active', 'promoted'])
           .not('activity_type', 'is', null)
-          .is('user_id', null) // Only system campaigns, not user activities
+          .is('user_id', null)
           .order('title');
 
         if (error) throw error;
@@ -54,6 +67,14 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
     );
   }
 
+  // Use campaigns if available, otherwise fall back to default activity types
+  const activityOptions = campaigns.length > 0 
+    ? campaigns.map(campaign => ({
+        value: campaign.activity_type,
+        label: campaign.title
+      }))
+    : defaultActivityTypes;
+
   return (
     <div className="space-y-2">
       <label htmlFor="activityType" className="text-sm font-medium">
@@ -66,18 +87,12 @@ export const ActivityTypeSelector = ({ value, onChange, isDisabled = false }: Ac
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         disabled={isDisabled}
       >
-        {campaigns.length === 0 ? (
-          <option value="">ไม่มีแคมเปญที่เปิดใช้งาน</option>
-        ) : (
-          <>
-            <option value="">เลือกประเภทกิจกรรม</option>
-            {campaigns.map((campaign) => (
-              <option key={campaign.id} value={campaign.activity_type}>
-                {campaign.title}
-              </option>
-            ))}
-          </>
-        )}
+        <option value="">เลือกประเภทกิจกรรม</option>
+        {activityOptions.map((option, index) => (
+          <option key={`${option.value}-${index}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </div>
   );
