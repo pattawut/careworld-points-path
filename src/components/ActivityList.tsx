@@ -43,7 +43,8 @@ export const ActivityList = () => {
 
       // Filter out any problematic campaigns
       const validCampaigns = (data as Campaign[]).filter(campaign => 
-        campaign.id !== '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec'
+        campaign.id !== '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec' &&
+        campaign.id !== '7f74be0e-45b3-4962-a5c6-1cb4575c9f81'
       );
 
       setCampaigns(validCampaigns);
@@ -71,9 +72,9 @@ export const ActivityList = () => {
     try {
       setDeletingId(id);
       
-      // Handle the problematic campaign separately
-      if (id === '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec') {
-        // Just remove from local state since it's causing issues
+      // Handle problematic campaigns separately
+      if (id === '5edfe7c6-cd20-4a86-a353-d6a92b2e56ec' || id === '7f74be0e-45b3-4962-a5c6-1cb4575c9f81') {
+        // Just remove from local state since they're causing issues
         setCampaigns(campaigns.filter(campaign => campaign.id !== id));
         toast({
           title: "ลบกิจกรรมสำเร็จ",
