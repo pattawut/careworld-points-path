@@ -212,7 +212,7 @@ const Leaderboard = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         {filteredUsers.slice(0, 3).map((user, index) => (
-          <Card key={user.id} className={`border-none shadow-lg overflow-hidden ${index === 0 ? 'md:order-2 ring-2 ring-yellow-400' : index === 1 ? 'md:order-1' : 'md:order-3'}`}>
+          <Card key={user.id} className={`border-none shadow-lg overflow-hidden ${index === 0 ? 'ring-2 ring-yellow-400' : ''}`}>
             <div className="relative h-32 bg-eco-gradient">
               <div className="absolute top-3 left-3">
                 <Badge className={`${index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-700'} px-3 font-bold`}>
