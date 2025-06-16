@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ActivityImageUpload } from '@/components/activity/ActivityImageUpload';
 
 interface ParticipationFormProps {
-  onSubmit: (file: File, description: string) => Promise<void>;
+  onSubmit: (file: File | null, description: string) => Promise<void>;
   isSubmitting: boolean;
   campaignPoints: number;
 }
@@ -30,8 +30,6 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile || !description.trim()) return;
-    
     await onSubmit(selectedFile, description);
     
     // Reset form after successful submission
@@ -45,16 +43,16 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
       <ActivityImageUpload
         preview={preview}
         onChange={handleFileChange}
-        isRequired
+        isRequired={false}
       />
       
       <div className="space-y-2">
         <label htmlFor="description" className="text-sm font-medium">
-          อธิบายกิจกรรมของคุณ <span className="text-red-500">*</span>
+          อธิบายกิจกรรมของคุณ
         </label>
         <Textarea
           id="description"
-          placeholder="เล่าถึงกิจกรรมที่คุณทำ เช่น ใช้ถุงผ้าไปซื้อของที่ตลาด..."
+          placeholder="เล่าถึงกิจกรรมที่คุณทำ เช่น ใช้ถุงผ้าไปซื้อของที่ตลาด... (ไม่บังคับ)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
@@ -63,7 +61,7 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
       
       <Button 
         onClick={handleSubmit}
-        disabled={isSubmitting || !selectedFile || !description.trim()}
+        disabled={isSubmitting}
         className="w-full bg-eco-gradient hover:opacity-90"
       >
         {isSubmitting ? "กำลังส่ง..." : `ส่งกิจกรรมและรับ ${campaignPoints} แต้ม`}
