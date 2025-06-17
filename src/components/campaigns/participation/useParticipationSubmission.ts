@@ -21,7 +21,7 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const submitParticipation = async (file: File | null, description: string) => {
+  const submitParticipation = async (file: File | null, description: string, quantity: number = 1) => {
     if (!user) {
       toast({
         title: "ไม่สามารถดำเนินการได้",
@@ -72,13 +72,14 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
         
       if (activityError) throw activityError;
 
-      // Create point log entry
+      // Create point log entry with quantity
       const { error: pointLogError } = await supabase
         .from('user_point_logs')
         .insert({
           user_id: user.id,
           campaign_id: newActivity.id,
           points: campaign.points,
+          quantity: quantity, // เพิ่ม quantity
           activity_type: campaign.activity_type || 'general',
           description: `คะแนนจากการเข้าร่วมกิจกรรม: ${campaign.title}`,
           action_type: 'earned'
@@ -89,9 +90,10 @@ export const useParticipationSubmission = (campaign: Campaign, onSuccess: () => 
         throw pointLogError;
       }
 
+      const totalPoints = campaign.points * quantity;
       toast({
         title: "เข้าร่วมกิจกรรมสำเร็จ",
-        description: `คุณได้รับ ${campaign.points} แต้มจากการเข้าร่วมกิจกรรม`,
+        description: `คุณได้รับ ${totalPoints} แต้มจากการเข้าร่วมกิจกรรม (${campaign.points} แต้ม × ${quantity})`,
       });
 
       onSuccess();

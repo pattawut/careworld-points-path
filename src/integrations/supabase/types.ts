@@ -211,6 +211,7 @@ export type Database = {
           id: string
           metadata: Json | null
           points: number
+          quantity: number
           user_id: string
         }
         Insert: {
@@ -222,6 +223,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           points: number
+          quantity?: number
           user_id: string
         }
         Update: {
@@ -233,6 +235,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           points?: number
+          quantity?: number
           user_id?: string
         }
         Relationships: [

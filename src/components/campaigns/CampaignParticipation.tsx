@@ -36,10 +36,10 @@ export const CampaignParticipation = ({
   const [submitting, setSubmitting] = useState(false);
   const { submitParticipation } = useParticipationSubmission(campaign, onParticipationSuccess);
 
-  const handleSubmit = async (file: File, description: string) => {
+  const handleSubmit = async (file: File | null, description: string, quantity: number) => {
     setSubmitting(true);
     try {
-      await submitParticipation(file, description);
+      await submitParticipation(file, description, quantity);
     } finally {
       setSubmitting(false);
     }

@@ -79,42 +79,57 @@ export const PointLogsCard = () => {
           </div>
         ) : (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {pointLogs.map((log) => (
-              <div key={log.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    {getActionIcon(log.action_type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {log.description || `${log.action_type} คะแนน`}
-                    </p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(log.created_at), 'dd MMM yyyy เวลา HH:mm', { locale: th })}
+            {pointLogs.map((log) => {
+              const totalPoints = log.points * log.quantity;
+              return (
+                <div key={log.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      {getActionIcon(log.action_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {log.description || `${log.action_type} คะแนน`}
                       </p>
-                      {log.activity_type && (
-                        <Badge variant="outline" className="text-xs">
-                          {log.activity_type}
-                        </Badge>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-xs text-gray-500">
+                          {format(new Date(log.created_at), 'dd MMM yyyy เวลา HH:mm', { locale: th })}
+                        </p>
+                        {log.activity_type && (
+                          <Badge variant="outline" className="text-xs">
+                            {log.activity_type}
+                          </Badge>
+                        )}
+                        {log.quantity > 1 && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                            จำนวน {log.quantity}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getActionColor(log.action_type)}>
+                      {getActionText(log.action_type)}
+                    </Badge>
+                    <div className="text-right">
+                      <span className={`font-semibold ${
+                        log.action_type === 'earned' || log.action_type === 'bonus' 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      }`}>
+                        {log.action_type === 'earned' || log.action_type === 'bonus' ? '+' : '-'}{totalPoints}
+                      </span>
+                      {log.quantity > 1 && (
+                        <p className="text-xs text-gray-500">
+                          ({log.points} × {log.quantity})
+                        </p>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className={getActionColor(log.action_type)}>
-                    {getActionText(log.action_type)}
-                  </Badge>
-                  <span className={`font-semibold ${
-                    log.action_type === 'earned' || log.action_type === 'bonus' 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
-                    {log.action_type === 'earned' || log.action_type === 'bonus' ? '+' : '-'}{log.points}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

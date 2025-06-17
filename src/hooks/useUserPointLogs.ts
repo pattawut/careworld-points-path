@@ -13,6 +13,7 @@ type PointLog = {
   created_at: string;
   campaign_id: string | null;
   metadata: any;
+  quantity: number; // เพิ่ม quantity
 };
 
 export const useUserPointLogs = () => {
