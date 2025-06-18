@@ -37,14 +37,18 @@ const Leaderboard = () => {
       try {
         setLoading(true);
 
-        // Fetch all users with their profiles (ไม่ต้องมี auth)
+        // Fetch all users with their profiles (ไม่ต้องมี auth - ใช้ public data)
         const { data: users, error: usersError } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url')
+          .select('id, full_name, avatar_url, eco_points')
           .order('full_name', { ascending: true });
 
         if (usersError) {
-          throw usersError;
+          console.error('Error fetching users:', usersError);
+          setAllTimeUsers([]);
+          setMonthlyUsers([]);
+          setWeeklyUsers([]);
+          return;
         }
 
         if (!users || users.length === 0) {
@@ -54,93 +58,85 @@ const Leaderboard = () => {
           return;
         }
 
-        // Get point totals and activity data for each user
+        // Get activity data for each user (use public data, no auth needed)
         const usersWithData = await Promise.all(
           users.map(async (user) => {
-            // Get total points using the database function
-            const { data: totalPointsData, error: totalError } = await supabase
-              .rpc('calculate_user_total_points', { user_uuid: user.id });
+            try {
+              // Count total activities (public data)
+              const { count: totalCount } = await supabase
+                .from('campaigns')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id);
 
-            if (totalError) {
-              console.error('Error calculating total points for user:', user.id, totalError);
+              // Count monthly activities (last 30 days)
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              const { count: monthlyCount, data: monthlyActivities } = await supabase
+                .from('campaigns')
+                .select('points', { count: 'exact' })
+                .eq('user_id', user.id)
+                .gte('created_at', thirtyDaysAgo.toISOString());
+
+              // Count weekly activities (last 7 days)
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              
+              const { count: weeklyCount, data: weeklyActivities } = await supabase
+                .from('campaigns')
+                .select('points', { count: 'exact' })
+                .eq('user_id', user.id)
+                .gte('created_at', sevenDaysAgo.toISOString());
+
+              // Get latest activity with image
+              const { data: latestActivity } = await supabase
+                .from('campaigns')
+                .select('title, image_url, created_at')
+                .eq('user_id', user.id)
+                .not('image_url', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+              // Calculate monthly points
+              const monthlyPoints = monthlyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+
+              // Calculate weekly points
+              const weeklyPoints = weeklyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+
+              return {
+                ...user,
+                eco_points: user.eco_points || 0, // ใช้คะแนนจาก profiles table
+                activities_count: totalCount || 0,
+                monthly_count: monthlyCount || 0,
+                weekly_count: weeklyCount || 0,
+                monthly_points: monthlyPoints,
+                weekly_points: weeklyPoints,
+                latest_activity: latestActivity || undefined
+              };
+            } catch (error) {
+              console.error('Error processing user data:', user.id, error);
+              return {
+                ...user,
+                eco_points: user.eco_points || 0,
+                activities_count: 0,
+                monthly_count: 0,
+                weekly_count: 0,
+                monthly_points: 0,
+                weekly_points: 0,
+                latest_activity: undefined
+              };
             }
-
-            const allTimePoints = totalPointsData || 0;
-
-            // Count total activities
-            const { count: totalCount } = await supabase
-              .from('campaigns')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id);
-
-            // Count monthly activities (last 30 days)
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            
-            const { count: monthlyCount } = await supabase
-              .from('campaigns')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id)
-              .gte('created_at', thirtyDaysAgo.toISOString());
-
-            // Count weekly activities (last 7 days)
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            
-            const { count: weeklyCount } = await supabase
-              .from('campaigns')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id)
-              .gte('created_at', sevenDaysAgo.toISOString());
-
-            // Get latest activity
-            const { data: latestActivity } = await supabase
-              .from('campaigns')
-              .select('title, image_url, created_at')
-              .eq('user_id', user.id)
-              .not('image_url', 'is', null)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-
-            // Calculate monthly points (sum of points from activities in last 30 days)
-            const { data: monthlyActivities } = await supabase
-              .from('campaigns')
-              .select('points')
-              .eq('user_id', user.id)
-              .gte('created_at', thirtyDaysAgo.toISOString());
-
-            const monthlyPoints = monthlyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
-
-            // Calculate weekly points (sum of points from activities in last 7 days)
-            const { data: weeklyActivities } = await supabase
-              .from('campaigns')
-              .select('points')
-              .eq('user_id', user.id)
-              .gte('created_at', sevenDaysAgo.toISOString());
-
-            const weeklyPoints = weeklyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
-
-            return {
-              ...user,
-              all_time_points: allTimePoints,
-              activities_count: totalCount || 0,
-              monthly_count: monthlyCount || 0,
-              weekly_count: weeklyCount || 0,
-              monthly_points: monthlyPoints,
-              weekly_points: weeklyPoints,
-              latest_activity: latestActivity || undefined
-            };
           })
         );
 
-        // Sort and set all-time leaderboard (using calculated total points)
+        // Sort and set all-time leaderboard (using eco_points from profiles)
         const sortedAllTime = usersWithData
-          .sort((a, b) => (b.all_time_points || 0) - (a.all_time_points || 0))
+          .sort((a, b) => (b.eco_points || 0) - (a.eco_points || 0))
           .map(user => ({
             id: user.id,
             full_name: user.full_name || 'ไม่ระบุชื่อ',
-            eco_points: user.all_time_points || 0,
+            eco_points: user.eco_points || 0,
             avatar_url: user.avatar_url,
             activities_count: user.activities_count,
             latest_activity: user.latest_activity

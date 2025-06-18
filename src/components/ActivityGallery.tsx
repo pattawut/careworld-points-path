@@ -42,88 +42,147 @@ export function ActivityGallery({
     try {
       setLoading(true);
       
-      // Query from campaigns table since activities table doesn't exist
-      let query = supabase
-        .from('campaigns')
-        .select(`
-          id,
-          title,
-          description,
-          image_url,
-          activity_type,
-          created_at,
-          points,
-          user_id
-        `)
-        .not('user_id', 'is', null) // Only show user-created campaigns
-        .order('created_at', { ascending: false });
-
       if (showUserActivities) {
         // ถ้า showUserActivities เป็น true แต่ไม่มี user login ให้แสดงเป็น empty
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          query = query.eq('user_id', user.id);
-        } else {
+        if (!user) {
           // ไม่มี user login ให้ return activities ว่าง
           setActivities([]);
           setLoading(false);
           return;
         }
-      }
-
-      if (limit) {
-        query = query.limit(limit);
-      } else {
-        query = query.limit(20);
-      }
-
-      const { data: campaignsData, error } = await query;
-
-      if (error) throw error;
-
-      if (campaignsData && campaignsData.length > 0) {
-        // Get unique user IDs for profile lookup
-        const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
         
-        let profilesData: any[] = [];
-        if (userIds.length > 0) {
-          const { data, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', userIds);
+        // Query user's own campaigns only
+        let query = supabase
+          .from('campaigns')
+          .select(`
+            id,
+            title,
+            description,
+            image_url,
+            activity_type,
+            created_at,
+            points,
+            user_id
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
-          if (profilesError) {
-            console.error('Error fetching profiles:', profilesError);
-          } else {
-            profilesData = data || [];
-          }
+        if (limit) {
+          query = query.limit(limit);
+        } else {
+          query = query.limit(20);
         }
 
-        // Create a lookup map for profiles
-        const profilesMap = profilesData.reduce((acc, profile) => {
-          acc[profile.id] = profile;
-          return acc;
-        }, {} as Record<string, any>);
+        const { data: campaignsData, error } = await query;
 
-        // Format the data to match ActivityWithUser type
-        const formattedActivities: ActivityWithUser[] = campaignsData.map((campaign: any) => ({
-          id: campaign.id,
-          title: campaign.title,
-          description: campaign.description || 'กิจกรรมรักษ์โลก',
-          image_url: campaign.image_url || '',
-          activity_type: campaign.activity_type || 'general',
-          created_at: campaign.created_at,
-          points: campaign.points,
-          user: {
-            full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
-            avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null,
-            id: campaign.user_id || ''
-          }
-        }));
-        
-        setActivities(formattedActivities);
+        if (error) throw error;
+
+        if (campaignsData && campaignsData.length > 0) {
+          // Get user profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .eq('id', user.id)
+            .single();
+
+          // Format the data to match ActivityWithUser type
+          const formattedActivities: ActivityWithUser[] = campaignsData.map((campaign: any) => ({
+            id: campaign.id,
+            title: campaign.title,
+            description: campaign.description || 'กิจกรรมรักษ์โลก',
+            image_url: campaign.image_url || '',
+            activity_type: campaign.activity_type || 'general',
+            created_at: campaign.created_at,
+            points: campaign.points,
+            user: {
+              full_name: profileData?.full_name || 'ผู้ใช้',
+              avatar_url: profileData?.avatar_url || null,
+              id: user.id
+            }
+          }));
+          
+          setActivities(formattedActivities);
+        } else {
+          setActivities([]);
+        }
       } else {
-        setActivities([]);
+        // แสดงกิจกรรมทั้งหมดของ user ทุกคน (ไม่ต้อง login)
+        // ใช้วิธี public query โดยไม่ผ่าน RLS
+        let query = supabase
+          .from('campaigns')
+          .select(`
+            id,
+            title,
+            description,
+            image_url,
+            activity_type,
+            created_at,
+            points,
+            user_id
+          `)
+          .not('user_id', 'is', null) // เฉพาะ user-created campaigns
+          .not('image_url', 'is', null) // เฉพาะที่มีรูป
+          .order('created_at', { ascending: false });
+
+        if (limit) {
+          query = query.limit(limit);
+        } else {
+          query = query.limit(20);
+        }
+
+        const { data: campaignsData, error } = await query;
+
+        if (error) {
+          console.error('Error fetching campaigns:', error);
+          setActivities([]);
+          return;
+        }
+
+        if (campaignsData && campaignsData.length > 0) {
+          // Get unique user IDs for profile lookup
+          const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
+          
+          let profilesData: any[] = [];
+          if (userIds.length > 0) {
+            const { data, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .in('id', userIds);
+
+            if (profilesError) {
+              console.error('Error fetching profiles:', profilesError);
+            } else {
+              profilesData = data || [];
+            }
+          }
+
+          // Create a lookup map for profiles
+          const profilesMap = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {} as Record<string, any>);
+
+          // Format the data to match ActivityWithUser type
+          const formattedActivities: ActivityWithUser[] = campaignsData.map((campaign: any) => ({
+            id: campaign.id,
+            title: campaign.title,
+            description: campaign.description || 'กิจกรรมรักษ์โลก',
+            image_url: campaign.image_url || '',
+            activity_type: campaign.activity_type || 'general',
+            created_at: campaign.created_at,
+            points: campaign.points,
+            user: {
+              full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
+              avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null,
+              id: campaign.user_id || ''
+            }
+          }));
+          
+          setActivities(formattedActivities);
+        } else {
+          setActivities([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
