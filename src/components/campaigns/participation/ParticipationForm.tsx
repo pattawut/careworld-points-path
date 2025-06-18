@@ -16,7 +16,7 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [description, setDescription] = useState('');
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<string>('1'); // เปลี่ยนเป็น string เพื่อให้แก้ไขได้
 
   const handleFileChange = (file: File | null) => {
     console.log('File selected:', file);
@@ -33,21 +33,26 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 1;
-    setQuantity(Math.max(1, value)); // ตรวจสอบให้ไม่น้อยกว่า 1
+    const value = e.target.value;
+    // อนุญาตให้พิมพ์ตัวเลขได้ และตรวจสอบว่าไม่ต่ำกว่า 1
+    if (value === '' || (parseInt(value) >= 1 && !isNaN(parseInt(value)))) {
+      setQuantity(value);
+    }
   };
 
   const handleSubmit = async () => {
-    await onSubmit(selectedFile, description, quantity);
+    const quantityNumber = parseInt(quantity) || 1;
+    await onSubmit(selectedFile, description, quantityNumber);
     
     // Reset form after successful submission
     setSelectedFile(null);
     setPreview(null);
     setDescription('');
-    setQuantity(1);
+    setQuantity('1');
   };
 
-  const totalPoints = campaignPoints * quantity;
+  const quantityNumber = parseInt(quantity) || 1;
+  const totalPoints = campaignPoints * quantityNumber;
 
   return (
     <div className="space-y-6">
@@ -63,15 +68,14 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
         </Label>
         <Input
           id="quantity"
-          type="number"
-          min="1"
+          type="text"
           value={quantity}
           onChange={handleQuantityChange}
           placeholder="จำนวน เช่น 5 ชิ้น"
           className="w-full"
         />
         <p className="text-xs text-gray-500">
-          คะแนนที่จะได้รับ: {campaignPoints} × {quantity} = {totalPoints} แต้ม
+          คะแนนที่จะได้รับ: {campaignPoints} × {quantityNumber} = {totalPoints} แต้ม
         </p>
       </div>
       
