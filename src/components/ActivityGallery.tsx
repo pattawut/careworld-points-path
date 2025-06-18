@@ -59,9 +59,15 @@ export function ActivityGallery({
         .order('created_at', { ascending: false });
 
       if (showUserActivities) {
+        // ถ้า showUserActivities เป็น true แต่ไม่มี user login ให้แสดงเป็น empty
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           query = query.eq('user_id', user.id);
+        } else {
+          // ไม่มี user login ให้ return activities ว่าง
+          setActivities([]);
+          setLoading(false);
+          return;
         }
       }
 

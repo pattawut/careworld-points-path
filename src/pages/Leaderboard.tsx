@@ -37,7 +37,7 @@ const Leaderboard = () => {
       try {
         setLoading(true);
 
-        // Fetch all users with their profiles
+        // Fetch all users with their profiles (ไม่ต้องมี auth)
         const { data: users, error: usersError } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url')

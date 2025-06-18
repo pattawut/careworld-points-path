@@ -23,7 +23,7 @@ export const LeaderboardPreview = () => {
       try {
         setLoading(true);
         
-        // Fetch top users by eco_points
+        // Fetch top users by eco_points (ไม่ต้องมี auth)
         const { data: users, error } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url, eco_points')
