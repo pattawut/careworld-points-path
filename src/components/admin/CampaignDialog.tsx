@@ -33,7 +33,7 @@ interface CampaignDialogProps {
 export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: CampaignDialogProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [points, setPoints] = useState(1);
   const [status, setStatus] = useState('draft');
   const [startDate, setStartDate] = useState('');
@@ -47,7 +47,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
     if (campaign) {
       setTitle(campaign.title);
       setDescription(campaign.description || '');
-      setImageUrl(campaign.image_url || '');
+      setImageUrls(campaign.image_url ? [campaign.image_url] : []);
       setPoints(campaign.points);
       setStatus(campaign.status);
       setStartDate(campaign.start_date ? campaign.start_date.split('T')[0] : '');
@@ -58,7 +58,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
     } else {
       setTitle('');
       setDescription('');
-      setImageUrl('');
+      setImageUrls([]);
       setPoints(1);
       setStatus('draft');
       setStartDate('');
@@ -127,7 +127,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
       const campaignData = {
         title,
         description: description || null,
-        image_url: imageUrl || null,
+        image_url: imageUrls.length > 0 ? imageUrls[0] : null, // ใช้รูปแรกเป็น primary image
         points,
         status,
         start_date: startDate ? new Date(startDate).toISOString() : null,
@@ -221,8 +221,8 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
           </div>
 
           <ImageUpload
-            imageUrl={imageUrl}
-            onImageUrlChange={setImageUrl}
+            imageUrls={imageUrls}
+            onImageUrlsChange={setImageUrls}
           />
 
           <CampaignTagSelector

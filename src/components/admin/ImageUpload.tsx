@@ -9,62 +9,80 @@ import { useToast } from '@/components/ui/use-toast';
 import { Upload, Link } from 'lucide-react';
 
 interface ImageUploadProps {
-  imageUrl: string;
-  onImageUrlChange: (url: string) => void;
+  imageUrls: string[];
+  onImageUrlsChange: (urls: string[]) => void;
+  maxImages?: number;
 }
 
-export const ImageUpload = ({ imageUrl, onImageUrlChange }: ImageUploadProps) => {
+export const ImageUpload = ({ imageUrls, onImageUrlsChange, maxImages = 10 }: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
-    // ตรวจสอบประเภทไฟล์
-    if (!file.type.startsWith('image/')) {
+    const totalImages = imageUrls.length + files.length;
+    if (totalImages > maxImages) {
       toast({
         variant: "destructive",
-        title: "ประเภทไฟล์ไม่ถูกต้อง",
-        description: "กรุณาเลือกไฟล์รูปภาพเท่านั้น"
+        title: "จำนวนรูปภาพเกินขีดจำกัด",
+        description: `สามารถอัปโหลดได้สูงสุด ${maxImages} รูป`
       });
       return;
     }
 
-    // ตรวจสอบขนาดไฟล์ (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "ไฟล์ใหญ่เกินไป",
-        description: "กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 5MB"
-      });
-      return;
+    // ตรวจสอบประเภทไฟล์และขนาด
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          variant: "destructive",
+          title: "ประเภทไฟล์ไม่ถูกต้อง",
+          description: `${file.name} ไม่ใช่ไฟล์รูปภาพ`
+        });
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "ไฟล์ใหญ่เกินไป",
+          description: `${file.name} มีขนาดใหญ่เกิน 5MB`
+        });
+        return;
+      }
     }
 
     setUploading(true);
+    const newUrls: string[] = [];
+
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
-        .from('campaign-images')
-        .upload(fileName, file);
+        const { data, error } = await supabase.storage
+          .from('campaign-images')
+          .upload(fileName, file);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // สร้าง public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('campaign-images')
-        .getPublicUrl(data.path);
+        // สร้าง public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('campaign-images')
+          .getPublicUrl(data.path);
 
-      onImageUrlChange(publicUrl);
+        newUrls.push(publicUrl);
+      }
+
+      onImageUrlsChange([...imageUrls, ...newUrls]);
       
       toast({
         title: "อัปโหลดสำเร็จ",
-        description: "รูปภาพได้รับการอัปโหลดแล้ว"
+        description: `อัปโหลดรูปภาพ ${files.length} รูปแล้ว`
       });
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error uploading images:', error);
       toast({
         variant: "destructive",
         title: "เกิดข้อผิดพลาด",
@@ -72,12 +90,31 @@ export const ImageUpload = ({ imageUrl, onImageUrlChange }: ImageUploadProps) =>
       });
     } finally {
       setUploading(false);
+      // Reset input
+      event.target.value = '';
     }
+  };
+
+  const handleUrlAdd = (url: string) => {
+    if (imageUrls.length >= maxImages) {
+      toast({
+        variant: "destructive",
+        title: "จำนวนรูปภาพเกินขีดจำกัด",
+        description: `สามารถเพิ่มได้สูงสุด ${maxImages} รูป`
+      });
+      return;
+    }
+    onImageUrlsChange([...imageUrls, url]);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newUrls = imageUrls.filter((_, i) => i !== index);
+    onImageUrlsChange(newUrls);
   };
 
   return (
     <div className="space-y-4">
-      <Label>รูปภาพ</Label>
+      <Label>รูปภาพ ({imageUrls.length}/{maxImages})</Label>
       
       <Tabs defaultValue="url" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -93,20 +130,30 @@ export const ImageUpload = ({ imageUrl, onImageUrlChange }: ImageUploadProps) =>
         
         <TabsContent value="url" className="space-y-2">
           <Input
-            value={imageUrl}
-            onChange={(e) => onImageUrlChange(e.target.value)}
-            placeholder="https://example.com/image.jpg"
+            placeholder="https://example.com/image.jpg (กด Enter เพื่อเพิ่ม)"
             type="url"
+            disabled={imageUrls.length >= maxImages}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                const input = e.target as HTMLInputElement;
+                const url = input.value.trim();
+                if (url) {
+                  handleUrlAdd(url);
+                  input.value = '';
+                }
+              }
+            }}
           />
-          <p className="text-xs text-gray-500">ใส่ URL ของรูปภาพที่ต้องการใช้</p>
+          <p className="text-xs text-gray-500">ใส่ URL ของรูปภาพและกด Enter เพื่อเพิ่ม</p>
         </TabsContent>
         
         <TabsContent value="upload" className="space-y-2">
           <Input
             type="file"
             accept="image/*"
+            multiple
             onChange={handleFileUpload}
-            disabled={uploading}
+            disabled={uploading || imageUrls.length >= maxImages}
           />
           <p className="text-xs text-gray-500">
             รองรับไฟล์รูปภาพ (JPG, PNG, GIF) ขนาดไม่เกิน 5MB
@@ -117,22 +164,35 @@ export const ImageUpload = ({ imageUrl, onImageUrlChange }: ImageUploadProps) =>
         </TabsContent>
       </Tabs>
 
-      {imageUrl && (
-        <div className="mt-4">
-          <Label className="text-sm text-gray-600">ตัวอย่างรูปภาพ:</Label>
-          <div className="mt-2 border rounded-lg overflow-hidden w-full max-w-sm">
-            <img 
-              src={imageUrl} 
-              alt="Campaign preview" 
-              className="w-full h-32 object-cover"
-              onError={() => {
-                toast({
-                  variant: "destructive",
-                  title: "ไม่สามารถโหลดรูปภาพได้",
-                  description: "กรุณาตรวจสอบ URL อีกครั้ง"
-                });
-              }}
-            />
+      {imageUrls.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <Label className="text-sm text-gray-600">รูปภาพที่เลือก:</Label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {imageUrls.map((url, index) => (
+              <div key={index} className="relative border rounded-lg overflow-hidden">
+                <img 
+                  src={url} 
+                  alt={`Campaign image ${index + 1}`} 
+                  className="w-full h-32 object-cover"
+                  onError={() => {
+                    toast({
+                      variant: "destructive",
+                      title: "ไม่สามารถโหลดรูปภาพได้",
+                      description: `รูปที่ ${index + 1} ไม่สามารถแสดงได้`
+                    });
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-1 right-1 p-1 h-6 w-6"
+                  onClick={() => handleRemoveImage(index)}
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       )}
