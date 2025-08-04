@@ -13,22 +13,30 @@ interface ParticipationFormProps {
 }
 
 export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: ParticipationFormProps) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState<string>('1'); // เปลี่ยนเป็น string เพื่อให้แก้ไขได้
 
-  const handleFileChange = (file: File | null) => {
-    console.log('File selected:', file);
-    setSelectedFile(file);
-    if (file) {
+  const handleFileChange = (files: File[]) => {
+    console.log('Files selected:', files);
+    setSelectedFiles(files);
+    
+    // สร้าง preview URLs
+    const newPreviews: string[] = [];
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPreview(e.target?.result as string);
+        newPreviews.push(e.target?.result as string);
+        if (newPreviews.length === files.length) {
+          setPreviews(newPreviews);
+        }
       };
       reader.readAsDataURL(file);
-    } else {
-      setPreview(null);
+    });
+    
+    if (files.length === 0) {
+      setPreviews([]);
     }
   };
 
@@ -42,11 +50,13 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
 
   const handleSubmit = async () => {
     const quantityNumber = parseInt(quantity) || 1;
-    await onSubmit(selectedFile, description, quantityNumber);
+    // ส่งรูปแรกเท่านั้น (รักษาความเข้ากันได้กับระบบเดิม)
+    const firstFile = selectedFiles.length > 0 ? selectedFiles[0] : null;
+    await onSubmit(firstFile, description, quantityNumber);
     
     // Reset form after successful submission
-    setSelectedFile(null);
-    setPreview(null);
+    setSelectedFiles([]);
+    setPreviews([]);
     setDescription('');
     setQuantity('1');
   };
@@ -57,7 +67,7 @@ export const ParticipationForm = ({ onSubmit, isSubmitting, campaignPoints }: Pa
   return (
     <div className="space-y-6">
       <ActivityImageUpload
-        preview={preview}
+        previews={previews}
         onChange={handleFileChange}
         isRequired={false}
       />

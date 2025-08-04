@@ -24,7 +24,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
     setActivityType,
     description,
     setDescription,
-    preview,
+    previews,
     isLoading,
     isEditing,
     isFormValid,
@@ -50,7 +50,7 @@ export const ActivityForm = ({ activity, onSuccess, onCancel }: ActivityFormProp
           />
           
           <ActivityImageUpload 
-            preview={preview}
+            previews={previews}
             onChange={handleImageChange}
             isDisabled={isLoading}
             isRequired={!isEditing}

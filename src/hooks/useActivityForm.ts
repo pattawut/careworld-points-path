@@ -20,21 +20,24 @@ interface UseActivityFormProps {
 export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) => {
   const [activityType, setActivityType] = useState(activity?.activity_type || 'recycle');
   const [description, setDescription] = useState(activity?.description || '');
-  const [image, setImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(activity?.image_url || null);
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>(activity?.image_url ? [activity.image_url] : []);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const isEditing = !!activity;
 
-  const handleImageChange = (file: File | null) => {
-    setImage(file);
-    if (file) {
+  const handleImageChange = (files: File[]) => {
+    setImages(files);
+    
+    // สร้าง preview URLs
+    const newPreviews: string[] = [];
+    files.forEach(file => {
       const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
-    } else {
-      setPreview(activity?.image_url || null);
-    }
+      newPreviews.push(objectUrl);
+    });
+    
+    setPreviews(newPreviews);
   };
 
   const copyTagsFromSelectedCampaign = async (newCampaignId: string, selectedActivityType: string) => {
@@ -80,15 +83,17 @@ export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) =
   };
 
   const handleImageUpload = async () => {
-    if (!image || !user) return activity?.image_url || null;
+    if (images.length === 0 || !user) return activity?.image_url || null;
 
-    const fileExt = image.name.split('.').pop();
+    // อัปโหลดรูปแรกเท่านั้น (รักษาความเข้ากันได้กับระบบเดิม)
+    const firstImage = images[0];
+    const fileExt = firstImage.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${user.id}/${fileName}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('activity-images')
-      .upload(filePath, image);
+      .upload(filePath, firstImage);
     
     if (uploadError) {
       throw uploadError;
@@ -174,8 +179,8 @@ export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) =
         // Reset form
         setActivityType('recycle');
         setDescription('');
-        setImage(null);
-        setPreview(null);
+        setImages([]);
+        setPreviews([]);
       }
       
       onSuccess();
@@ -192,15 +197,15 @@ export const useActivityForm = ({ activity, onSuccess }: UseActivityFormProps) =
     }
   };
 
-  const isFormValid = !isEditing ? (!!description && !!preview) : !!description;
+  const isFormValid = !isEditing ? (!!description && previews.length > 0) : !!description;
 
   return {
     activityType,
     setActivityType,
     description,
     setDescription,
-    image,
-    preview,
+    images,
+    previews,
     isLoading,
     isEditing,
     isFormValid,
