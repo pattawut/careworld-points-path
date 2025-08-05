@@ -1,6 +1,8 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Users, Calendar } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Target, Users, Calendar, X } from 'lucide-react';
 
 type Campaign = {
   id: string;
@@ -25,6 +27,8 @@ interface CampaignDetailsProps {
 }
 
 export const CampaignDetails = ({ campaign }: CampaignDetailsProps) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   return (
     <Card className="border-none shadow-lg">
       <CardHeader>
@@ -92,18 +96,47 @@ export const CampaignDetails = ({ campaign }: CampaignDetailsProps) => {
             <h3 className="text-lg font-semibold mb-4">รูปภาพเพิ่มเติม</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {campaign.image_urls.slice(1).map((imageUrl, index) => (
-                <div key={index} className="aspect-square rounded-lg overflow-hidden">
+                <div 
+                  key={index} 
+                  className="aspect-square rounded-lg overflow-hidden cursor-pointer group relative"
+                  onClick={() => setSelectedImage(imageUrl)}
+                >
                   <img 
                     src={imageUrl} 
                     alt={`รูปภาพเพิ่มเติม ${index + 1}`}
-                    className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                    className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200"
                   />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-200 flex items-center justify-center">
+                    <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
+                      คลิกเพื่อขยาย
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </CardContent>
+      
+      {/* Image Modal */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            <img 
+              src={selectedImage || ''} 
+              alt="รูปภาพขยาย"
+              className="w-full h-auto max-h-[85vh] object-contain"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              aria-label="ปิด"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
