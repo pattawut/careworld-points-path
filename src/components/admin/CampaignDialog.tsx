@@ -17,6 +17,7 @@ interface Campaign {
   title: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[];
   points: number;
   status: string;
   start_date: string | null;
@@ -47,7 +48,14 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
     if (campaign) {
       setTitle(campaign.title);
       setDescription(campaign.description || '');
-      setImageUrls(campaign.image_url ? [campaign.image_url] : []);
+      // Use image_urls if available, otherwise fall back to image_url
+      let urls: string[] = [];
+      if (campaign.image_urls && campaign.image_urls.length > 0) {
+        urls = campaign.image_urls;
+      } else if (campaign.image_url) {
+        urls = [campaign.image_url];
+      }
+      setImageUrls(urls);
       setPoints(campaign.points);
       setStatus(campaign.status);
       setStartDate(campaign.start_date ? campaign.start_date.split('T')[0] : '');
@@ -128,6 +136,7 @@ export const CampaignDialog = ({ open, onOpenChange, campaign, onSuccess }: Camp
         title,
         description: description || null,
         image_url: imageUrls.length > 0 ? imageUrls[0] : null, // ใช้รูปแรกเป็น primary image
+        image_urls: imageUrls, // เก็บรูปทั้งหมดในรูปแบบ JSON
         points,
         status,
         start_date: startDate ? new Date(startDate).toISOString() : null,

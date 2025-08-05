@@ -14,6 +14,7 @@ interface Campaign {
   title: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[];
   points: number;
   status: string;
   start_date: string | null;
@@ -63,11 +64,44 @@ export const AdminCampaigns = () => {
 
           if (tagError) {
             console.error('Error fetching tags for campaign:', campaign.id, tagError);
-            return { ...campaign, tags: [] };
+            return {
+              id: campaign.id,
+              title: campaign.title,
+              description: campaign.description,
+              image_url: campaign.image_url,
+              image_urls: undefined,
+              points: campaign.points,
+              status: campaign.status,
+              start_date: campaign.start_date,
+              end_date: campaign.end_date,
+              created_at: campaign.created_at,
+              updated_at: campaign.updated_at,
+              tags: []
+            } as Campaign;
           }
 
           const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
-          return { ...campaign, tags };
+          
+          // Convert image_urls from Json to string array
+          let image_urls: string[] = [];
+          if (campaign.image_urls && Array.isArray(campaign.image_urls)) {
+            image_urls = campaign.image_urls.filter((url): url is string => typeof url === 'string');
+          }
+          
+          return { 
+            id: campaign.id,
+            title: campaign.title,
+            description: campaign.description,
+            image_url: campaign.image_url,
+            image_urls: image_urls.length > 0 ? image_urls : undefined,
+            points: campaign.points,
+            status: campaign.status,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            created_at: campaign.created_at,
+            updated_at: campaign.updated_at,
+            tags
+          } as Campaign;
         })
       );
 

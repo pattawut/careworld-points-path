@@ -35,7 +35,7 @@ export const useCampaignData = (id: string | undefined, userId: string | undefin
       
       const { data: campaignData, error: campaignError } = await supabase
         .from('campaigns')
-        .select('*')
+        .select('*, image_urls')
         .eq('id', id)
         .single();
 
@@ -59,20 +59,14 @@ export const useCampaignData = (id: string | undefined, userId: string | undefin
 
       const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
       
-      // Parse image_urls if it exists
+      // Use image_urls from database if available, otherwise fall back to image_url
       let image_urls: string[] = [];
-      if (campaignData.image_url) {
-        try {
-          // Try to parse as JSON array first
-          image_urls = JSON.parse(campaignData.image_url);
-          if (!Array.isArray(image_urls)) {
-            // If not an array, treat as single URL
-            image_urls = [campaignData.image_url];
-          }
-        } catch {
-          // If parsing fails, treat as single URL
-          image_urls = [campaignData.image_url];
-        }
+      if (campaignData.image_urls && Array.isArray(campaignData.image_urls) && campaignData.image_urls.length > 0) {
+        // Use the new image_urls column - filter and convert to strings
+        image_urls = campaignData.image_urls.filter((url): url is string => typeof url === 'string');
+      } else if (campaignData.image_url) {
+        // Fall back to single image_url
+        image_urls = [campaignData.image_url];
       }
       
       setCampaign({
