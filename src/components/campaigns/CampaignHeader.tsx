@@ -7,6 +7,7 @@ type Campaign = {
   title: string | null;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[];
   points: number;
   start_date: string | null;
   end_date: string | null;
@@ -28,7 +29,7 @@ export const CampaignHeader = ({ campaign }: CampaignHeaderProps) => {
     <div className="relative mb-8">
       <div className="aspect-video md:aspect-[3/1] relative rounded-xl overflow-hidden">
         <img 
-          src={campaign.image_url || "https://placehold.co/1200x400/e5f7f0/2c7873?text=Campaign+Image"}
+          src={(campaign.image_urls && campaign.image_urls.length > 0) ? campaign.image_urls[0] : campaign.image_url || "https://placehold.co/1200x400/e5f7f0/2c7873?text=Campaign+Image"}
           alt={campaign.title || 'Campaign'}
           className="object-cover w-full h-full"
         />

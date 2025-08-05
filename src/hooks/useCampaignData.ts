@@ -8,6 +8,7 @@ type Campaign = {
   title: string | null;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[];
   points: number;
   start_date: string | null;
   end_date: string | null;
@@ -58,9 +59,26 @@ export const useCampaignData = (id: string | undefined, userId: string | undefin
 
       const tags = tagData?.map(relation => relation.campaign_tags).filter(Boolean) || [];
       
+      // Parse image_urls if it exists
+      let image_urls: string[] = [];
+      if (campaignData.image_url) {
+        try {
+          // Try to parse as JSON array first
+          image_urls = JSON.parse(campaignData.image_url);
+          if (!Array.isArray(image_urls)) {
+            // If not an array, treat as single URL
+            image_urls = [campaignData.image_url];
+          }
+        } catch {
+          // If parsing fails, treat as single URL
+          image_urls = [campaignData.image_url];
+        }
+      }
+      
       setCampaign({
         ...campaignData,
-        tags
+        tags,
+        image_urls: image_urls.length > 0 ? image_urls : undefined
       });
     } catch (error) {
       console.error('Error fetching campaign:', error);

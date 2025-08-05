@@ -7,6 +7,7 @@ type Campaign = {
   title: string | null;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[];
   points: number;
   start_date: string | null;
   end_date: string | null;
@@ -84,6 +85,24 @@ export const CampaignDetails = ({ campaign }: CampaignDetailsProps) => {
             )}
           </div>
         </div>
+        
+        {/* Additional Images */}
+        {campaign.image_urls && campaign.image_urls.length > 1 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4">รูปภาพเพิ่มเติม</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {campaign.image_urls.slice(1).map((imageUrl, index) => (
+                <div key={index} className="aspect-square rounded-lg overflow-hidden">
+                  <img 
+                    src={imageUrl} 
+                    alt={`รูปภาพเพิ่มเติม ${index + 1}`}
+                    className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
