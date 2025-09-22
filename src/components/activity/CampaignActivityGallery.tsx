@@ -66,6 +66,26 @@ export const CampaignActivityGallery = ({
           return;
         }
 
+        // Get campaign IDs to fetch point logs
+        const campaignIds = campaignsData.map(campaign => campaign.id);
+        
+        // Fetch point logs for these campaigns to get correct points with quantity
+        const { data: pointLogsData, error: pointLogsError } = await supabase
+          .from('user_point_logs')
+          .select('campaign_id, points, quantity')
+          .in('campaign_id', campaignIds)
+          .eq('action_type', 'earned');
+
+        if (pointLogsError) {
+          throw pointLogsError;
+        }
+
+        // Create a lookup map for point logs
+        const pointLogsMap = pointLogsData?.reduce((acc, log) => {
+          acc[log.campaign_id] = log.points * log.quantity; // Calculate total points
+          return acc;
+        }, {} as Record<string, number>) || {};
+
         // Get unique user IDs for profile lookup
         const userIds = [...new Set(campaignsData.map(campaign => campaign.user_id).filter(Boolean))];
         
@@ -88,9 +108,10 @@ export const CampaignActivityGallery = ({
           return acc;
         }, {} as Record<string, any>);
 
-        // Combine campaigns with their user data
+        // Combine campaigns with their user data and correct points
         const campaignsWithUserData = campaignsData.map(campaign => ({
           ...campaign,
+          points: pointLogsMap[campaign.id] || campaign.points, // Use calculated points from logs
           user: {
             full_name: campaign.user_id ? (profilesMap[campaign.user_id]?.full_name || 'ผู้ใช้') : 'ระบบ',
             avatar_url: campaign.user_id ? profilesMap[campaign.user_id]?.avatar_url : null
