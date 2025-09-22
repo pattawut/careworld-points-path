@@ -75,24 +75,24 @@ const Leaderboard = () => {
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', user.id);
 
-              // Count monthly activities (for selected month)
+              // Get monthly activities count (for selected month)
               const monthStart = startOfMonth(selectedMonth);
               const monthEnd = endOfMonth(selectedMonth);
               
-              const { count: monthlyCount, data: monthlyActivities } = await supabase
+              const { count: monthlyCount } = await supabase
                 .from('campaigns')
-                .select('points', { count: 'exact' })
+                .select('*', { count: 'exact', head: true })
                 .eq('user_id', user.id)
                 .gte('created_at', monthStart.toISOString())
                 .lte('created_at', monthEnd.toISOString());
 
-              // Count weekly activities (for selected week)
+              // Get weekly activities count (for selected week)
               const weekStart = startOfWeek(selectedWeek, { weekStartsOn: 1 }); // Start week on Monday
               const weekEnd = endOfWeek(selectedWeek, { weekStartsOn: 1 });
               
-              const { count: weeklyCount, data: weeklyActivities } = await supabase
+              const { count: weeklyCount } = await supabase
                 .from('campaigns')
-                .select('points', { count: 'exact' })
+                .select('*', { count: 'exact', head: true })
                 .eq('user_id', user.id)
                 .gte('created_at', weekStart.toISOString())
                 .lte('created_at', weekEnd.toISOString());
@@ -107,11 +107,35 @@ const Leaderboard = () => {
                 .limit(1)
                 .single();
 
-              // Calculate monthly points
-              const monthlyPoints = monthlyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+              // Calculate monthly points using user_point_logs with quantity
+              const { data: monthlyPointLogs } = await supabase
+                .from('user_point_logs')
+                .select('points, quantity, action_type')
+                .eq('user_id', user.id)
+                .gte('created_at', monthStart.toISOString())
+                .lte('created_at', monthEnd.toISOString());
 
-              // Calculate weekly points
-              const weeklyPoints = weeklyActivities?.reduce((sum, activity) => sum + (activity.points || 0), 0) || 0;
+              const monthlyPoints = monthlyPointLogs?.reduce((sum, log) => {
+                const points = log.action_type === 'earned' 
+                  ? log.points * log.quantity 
+                  : -(log.points * log.quantity);
+                return sum + points;
+              }, 0) || 0;
+
+              // Calculate weekly points using user_point_logs with quantity
+              const { data: weeklyPointLogs } = await supabase
+                .from('user_point_logs')
+                .select('points, quantity, action_type')
+                .eq('user_id', user.id)
+                .gte('created_at', weekStart.toISOString())
+                .lte('created_at', weekEnd.toISOString());
+
+              const weeklyPoints = weeklyPointLogs?.reduce((sum, log) => {
+                const points = log.action_type === 'earned' 
+                  ? log.points * log.quantity 
+                  : -(log.points * log.quantity);
+                return sum + points;
+              }, 0) || 0;
 
               return {
                 ...user,
