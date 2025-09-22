@@ -4,12 +4,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Award, Users, Calendar } from 'lucide-react';
+import { Award, Users, Calendar, CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { getAvatarUrl } from '@/utils/avatarUtils';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, subWeeks, addMonths, addWeeks } from 'date-fns';
+import { th } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 type LeaderboardUser = {
   id: string;
@@ -30,6 +35,8 @@ const Leaderboard = () => {
   const [monthlyUsers, setMonthlyUsers] = useState<LeaderboardUser[]>([]);
   const [weeklyUsers, setWeeklyUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -68,25 +75,27 @@ const Leaderboard = () => {
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', user.id);
 
-              // Count monthly activities (last 30 days)
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              // Count monthly activities (for selected month)
+              const monthStart = startOfMonth(selectedMonth);
+              const monthEnd = endOfMonth(selectedMonth);
               
               const { count: monthlyCount, data: monthlyActivities } = await supabase
                 .from('campaigns')
                 .select('points', { count: 'exact' })
                 .eq('user_id', user.id)
-                .gte('created_at', thirtyDaysAgo.toISOString());
+                .gte('created_at', monthStart.toISOString())
+                .lte('created_at', monthEnd.toISOString());
 
-              // Count weekly activities (last 7 days)
-              const sevenDaysAgo = new Date();
-              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              // Count weekly activities (for selected week)
+              const weekStart = startOfWeek(selectedWeek, { weekStartsOn: 1 }); // Start week on Monday
+              const weekEnd = endOfWeek(selectedWeek, { weekStartsOn: 1 });
               
               const { count: weeklyCount, data: weeklyActivities } = await supabase
                 .from('campaigns')
                 .select('points', { count: 'exact' })
                 .eq('user_id', user.id)
-                .gte('created_at', sevenDaysAgo.toISOString());
+                .gte('created_at', weekStart.toISOString())
+                .lte('created_at', weekEnd.toISOString());
 
               // Get latest activity with image
               const { data: latestActivity } = await supabase
@@ -185,7 +194,7 @@ const Leaderboard = () => {
     };
 
     fetchLeaderboardData();
-  }, [toast]);
+  }, [toast, selectedMonth, selectedWeek]);
 
   const filterUsers = (users: LeaderboardUser[]) => {
     if (!searchTerm) return users;
@@ -402,10 +411,102 @@ const Leaderboard = () => {
                 </TabsContent>
                 
                 <TabsContent value="monthly">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
+                      className="flex items-center gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      เดือนก่อน
+                    </Button>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[200px] justify-start text-left font-normal",
+                            "hover:bg-eco-light"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(selectedMonth, "MMMM yyyy", { locale: th })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedMonth}
+                          onSelect={(date) => date && setSelectedMonth(date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
+                      disabled={selectedMonth >= new Date()}
+                      className="flex items-center gap-2"
+                    >
+                      เดือนถัดไป
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {renderTopThree(monthlyUsers)}
                 </TabsContent>
                 
                 <TabsContent value="weekly">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWeek(subWeeks(selectedWeek, 1))}
+                      className="flex items-center gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      สัปดาห์ก่อน
+                    </Button>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[220px] justify-start text-left font-normal",
+                            "hover:bg-eco-light"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(startOfWeek(selectedWeek, { weekStartsOn: 1 }), "dd MMM", { locale: th })} - {format(endOfWeek(selectedWeek, { weekStartsOn: 1 }), "dd MMM yyyy", { locale: th })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedWeek}
+                          onSelect={(date) => date && setSelectedWeek(date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWeek(addWeeks(selectedWeek, 1))}
+                      disabled={selectedWeek >= new Date()}
+                      className="flex items-center gap-2"
+                    >
+                      สัปดาห์ถัดไป
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {renderTopThree(weeklyUsers)}
                 </TabsContent>
               </Tabs>
@@ -437,10 +538,102 @@ const Leaderboard = () => {
                 </TabsContent>
                 
                 <TabsContent value="monthly">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
+                      className="flex items-center gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      เดือนก่อน
+                    </Button>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[200px] justify-start text-left font-normal",
+                            "hover:bg-eco-light"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(selectedMonth, "MMMM yyyy", { locale: th })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedMonth}
+                          onSelect={(date) => date && setSelectedMonth(date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
+                      disabled={selectedMonth >= new Date()}
+                      className="flex items-center gap-2"
+                    >
+                      เดือนถัดไป
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {renderLeaderboardTable(monthlyUsers)}
                 </TabsContent>
                 
                 <TabsContent value="weekly">
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWeek(subWeeks(selectedWeek, 1))}
+                      className="flex items-center gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      สัปดาห์ก่อน
+                    </Button>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[220px] justify-start text-left font-normal",
+                            "hover:bg-eco-light"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(startOfWeek(selectedWeek, { weekStartsOn: 1 }), "dd MMM", { locale: th })} - {format(endOfWeek(selectedWeek, { weekStartsOn: 1 }), "dd MMM yyyy", { locale: th })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedWeek}
+                          onSelect={(date) => date && setSelectedWeek(date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWeek(addWeeks(selectedWeek, 1))}
+                      disabled={selectedWeek >= new Date()}
+                      className="flex items-center gap-2"
+                    >
+                      สัปดาห์ถัดไป
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {renderLeaderboardTable(weeklyUsers)}
                 </TabsContent>
               </Tabs>
